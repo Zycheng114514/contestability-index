@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Contestability Index</title>
+<meta name="description" content="Fifteen pro-contestability obligation categories scored across nine jurisdictions, with a de facto pilot measuring observed market conditions before and after the Digital Markets Act.">
+<!-- Preview: keep search engines out until the figures are final. Remove this line at launch. -->
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%232a78d6'/><rect x='3' y='8' width='2.5' height='5' fill='%23fff'/><rect x='6.75' y='5' width='2.5' height='8' fill='%23fff'/><rect x='10.5' y='3' width='2.5' height='10' fill='%23fff'/></svg>">
+<link rel="stylesheet" href="css/style.css?v=20260916">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <h1>The Contestability Index</h1>
+    <p class="tagline">How contestable are digital platform markets? Fifteen pro-contestability
+      obligation categories, scored on the law as written across nine jurisdictions, and a de facto
+      pilot measuring what actually changed in two European markets after the Digital Markets Act.</p>
+    <p class="metaline" id="metaline"></p>
+    <p class="ribbon" id="ribbon" hidden><span aria-hidden="true">&#9888;</span><span id="ribbon-text"></span></p>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
+      <button role="tab" data-tab="dejure" aria-selected="false">De Jure Explorer</button>
+      <button role="tab" data-tab="defacto" aria-selected="false">De Facto Pilot</button>
+      <button role="tab" data-tab="markets" aria-selected="false">Markets</button>
+      <button role="tab" data-tab="methodology" aria-selected="false">Methodology</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ======================================================= overview -->
+  <section id="view-overview" role="tabpanel" aria-label="Overview">
+
+    <div class="card headline">
+      <h2>Law on the books is not the same as a contestable market</h2>
+      <p class="sub">The European Union mandates every one of the fifteen obligation categories in
+        full: its de jure score is the maximum the index can award. Yet in the two European markets
+        where we measured observed conditions, contestability after the Digital Markets Act remains
+        far below what the law requires. The distance between the two bars is the finding.</p>
+      <div id="gap"></div>
+      <p class="axis-note">De jure = the enacted legal framework for the European Union.
+        De facto = observed market conditions for that core platform service, post-DMA.
+        The paper offers four ways of relating the two layers and does not privilege one; this page
+        shows the gap because it keeps both components visible. The methodology page lists all four.</p>
+    </div>
+
+    <div class="card">
+      <h2>Where contestability obligations exist</h2>
+      <p class="sub small">Nine jurisdictions are assessed. Everywhere else is unassessed, which is
+        not the same as a score of zero. Click a shaded area to open its record.</p>
+      <div id="map"></div>
+      <div id="map-legend" class="map-legend"></div>
+      <p class="axis-note" id="map-note"></p>
+    </div>
+
+    <div class="card">
+      <h2>Overall de jure index by jurisdiction</h2>
+      <p class="sub small">Equal-weighted mean of the four dimension scores. Click a jurisdiction to
+        open its category-level detail.</p>
+      <div class="bar-plot" id="ranking"></div>
+      <p class="axis-note">0 = no contestability obligations &nbsp;&middot;&nbsp; 1 = fully mandated across all fifteen categories</p>
+    </div>
+
+    <div class="card">
+      <h2>Dimension breakdown</h2>
+      <p class="sub small">Mean of the category scores in each dimension. Jurisdictions appear in
+        overall-ranking order in every panel, so a panel that reorders the eye is a real difference.</p>
+      <div class="dim-grid" id="dimgrid"></div>
+    </div>
+  </section>
+
+  <!-- ======================================================= de jure -->
+  <section id="view-dejure" role="tabpanel" aria-label="De Jure Explorer" hidden>
+    <p class="lead">All <span id="dj-count"></span> assessments. Every cell is the minimum of
+      Existence, Scope and Enforceability, so a category scores well only where a rule exists,
+      reaches the whole market, and can be enforced. Click any cell for the three factor scores,
+      the scoring rationale, the governing instrument and, where we hold it, the verbatim legal text.</p>
+
+    <div class="card">
+      <div class="filters" id="filters"></div>
+      <div id="profile" class="profile" hidden></div>
+      <div class="heat-wrap"><div id="heatmap"></div></div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </section>
+
+  <!-- ======================================================= de facto -->
+  <section id="view-defacto" role="tabpanel" aria-label="De Facto Pilot" hidden>
+    <p class="lead" id="df-note"></p>
+
+    <div class="callout scope-warning">
+      <strong>Read the scope before the scores.</strong> The de facto layer covers two core platform
+      services in the European Union only, observed at two points in time. It is not a nine-jurisdiction
+      measure, and nothing on this page should be compared directly with another jurisdiction's de jure score.
+    </div>
+
+    <div class="card">
+      <h2>Composite de facto contestability, before and after the DMA</h2>
+      <p class="sub small">Equal-weighted mean of the four dimension composites. Use the weighting
+        control to see whether the direction of the change survives a different set of weights.</p>
+      <div class="scheme-switch" id="scheme-switch"></div>
+      <div id="df-tiles"></div>
+    </div>
+
+    <div class="card">
+      <h2>Dimension by dimension</h2>
+      <p class="sub small">One panel per dimension, both services on the same scale. A steeper line
+        is a larger observed change between the pre-DMA baseline and the post-DMA observation.</p>
+      <div class="slope-grid" id="slopes"></div>
+    </div>
+
+    <div class="card">
+      <h2>Sub-indicator evidence</h2>
+      <p class="sub small">Every score below is a scored observation with documented evidence for both
+        periods. Expand a row to read the evidence, the confidence assigned to it and the sources.</p>
+      <div class="dim-chips" id="df-dim-chips"></div>
+      <div id="df-detail"></div>
+    </div>
+
+    <div class="card">
+      <h2>Which DMA obligation drives which dimension</h2>
+      <p class="sub small">The mapping the pilot used to connect specific Digital Markets Act
+        articles to the four dimensions.</p>
+      <div id="obligation-map"></div>
+    </div>
+  </section>
+
+  <!-- ======================================================= markets -->
+  <section id="view-markets" role="tabpanel" aria-label="Markets" hidden>
+    <p class="lead">The jurisdiction layer asks what a legal regime mandates in general. The market
+      layer asks which instruments actually bite in a named market. A jurisdiction can score well
+      overall while leaving a specific market untouched.</p>
+
+    <div class="card">
+      <h2>Regime coverage by market</h2>
+      <p class="sub small">Eleven markets across nine jurisdictions. Colour shows the kind of regime
+        in force, not a score. Click a cell for the binding instruments and the firms they reach.</p>
+      <div class="heat-wrap"><div id="market-matrix"></div></div>
+      <div id="market-legend" class="legend"></div>
+    </div>
+
+    <div class="card" id="market-dj-card">
+      <h2>Market-level de jure scoring</h2>
+      <p class="sub small">Two European markets scored category by category, with the governing
+        provision and the verbatim hook that makes it apply to that market.</p>
+      <div id="market-dj"></div>
+    </div>
+  </section>
+
+  <!-- ======================================================= methodology -->
+  <section id="view-methodology" role="tabpanel" aria-label="Methodology" hidden>
+    <div class="card prose" id="methodology"></div>
+  </section>
+
+</main>
+
+<aside id="panel" class="panel" role="dialog" aria-modal="false" aria-label="Detail" hidden></aside>
+<div id="tooltip" class="tooltip" role="status" aria-live="polite" hidden></div>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p class="small muted" id="footer-note"></p>
+  </div>
+</footer>
+
+<script src="js/world.js?v=20260916"></script>
+<script src="js/data.js?v=20260916"></script>
+<script src="js/app.js?v=20260916"></script>
+</body>
+</html>

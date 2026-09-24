@@ -8,7 +8,7 @@
 <!-- Preview: keep search engines out until the figures are final. Remove this line at launch. -->
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%232a78d6'/><rect x='3' y='8' width='2.5' height='5' fill='%23fff'/><rect x='6.75' y='5' width='2.5' height='8' fill='%23fff'/><rect x='10.5' y='3' width='2.5' height='10' fill='%23fff'/></svg>">
-<link rel="stylesheet" href="css/style.css?v=20260924b">
+<link rel="stylesheet" href="css/style.css?v=cdfed137">
 </head>
 <body>
 
@@ -31,6 +31,7 @@
 </header>
 
 <main class="wrap">
+  <p class="load-status" id="load-status" hidden></p>
 
   <!-- ======================================================= overview -->
   <section id="view-overview" role="tabpanel" aria-label="Overview">
@@ -42,10 +43,10 @@
         where we measured observed conditions, contestability after the Digital Markets Act remains
         far below what the law requires. The distance between the two bars is the finding.</p>
       <div id="gap"></div>
-      <p class="axis-note">De jure = the enacted legal framework for the European Union.
-        De facto = observed market conditions for that core platform service, post-DMA.
-        The paper offers four ways of relating the two layers and does not privilege one; this page
-        shows the gap because it keeps both components visible. The methodology page lists all four.</p>
+      <p class="axis-note">De jure = the market-level legal framework in the European Union, June 2026.
+        De facto = observed market conditions for that gatekeeper–market pair, July 2026.
+        The paper gives four ways of relating the two layers; the table under the bars reports all four,
+        at the December 2023 baseline and at the latest observation.</p>
     </div>
 
     <div class="card">
@@ -93,38 +94,37 @@
     <p class="lead" id="df-note"></p>
 
     <div class="callout scope-warning">
-      <strong>Read the scope before the scores.</strong> The de facto layer covers two core platform
-      services in the European Union only, observed at two points in time. It is not a nine-jurisdiction
+      <strong>Read the scope before the scores.</strong> The de facto layer covers three gatekeeper–market
+      pairs in two European Union markets, observed at two points in time. It is not a nine-jurisdiction
       measure, and nothing on this page should be compared directly with another jurisdiction's de jure score.
     </div>
 
     <div class="card">
       <h2>Composite de facto contestability, before and after the DMA</h2>
-      <p class="sub small">Equal-weighted mean of the four dimension composites. Use the weighting
-        control to see whether the direction of the change survives a different set of weights.</p>
-      <div class="scheme-switch" id="scheme-switch"></div>
+      <p class="sub small">Equal-weighted mean of the four dimension scores; each dimension score is the
+        mean of its scored indicators.</p>
       <div id="df-tiles"></div>
     </div>
 
     <div class="card">
       <h2>Dimension by dimension</h2>
-      <p class="sub small">One panel per dimension, both services on the same scale. A steeper line
+      <p class="sub small">One panel per dimension, all three pairs on the same scale. A steeper line
         is a larger observed change between the pre-DMA baseline and the post-DMA observation.</p>
       <div class="slope-grid" id="slopes"></div>
     </div>
 
     <div class="card">
-      <h2>Sub-indicator evidence</h2>
-      <p class="sub small">Every score below is a scored observation with documented evidence for both
-        periods. Expand a row to read the evidence, the confidence assigned to it and the sources.</p>
+      <h2>Indicator evidence</h2>
+      <p class="sub small">Expand a row to read the evidence and scoring rationale, the confidence assigned
+        to the score and the sources. Missing and Not Applicable indicators are listed with the reason.</p>
       <div class="dim-chips" id="df-dim-chips"></div>
       <div id="df-detail"></div>
     </div>
 
     <div class="card">
-      <h2>Which DMA obligation drives which dimension</h2>
-      <p class="sub small">The mapping the pilot used to connect specific Digital Markets Act
-        articles to the four dimensions.</p>
+      <h2>The DMA obligations each dimension observes</h2>
+      <p class="sub small">The Digital Markets Act articles whose effects the indicators in each
+        dimension are designed to observe.</p>
       <div id="obligation-map"></div>
     </div>
   </section>
@@ -145,8 +145,10 @@
 
     <div class="card" id="market-dj-card">
       <h2>Market-level de jure scoring</h2>
-      <p class="sub small">Two European markets scored category by category, with the governing
-        provision and the verbatim hook that makes it apply to that market.</p>
+      <p class="sub small">Two European markets scored category by category in June 2026 and, for Google
+        Search and the Apple App Store, at the December 2023 baseline, with the governing provision and the
+        verbatim hook that makes it apply to that market. Google Play carries the app-distribution record,
+        because the same obligations bind both app stores.</p>
       <div id="market-dj"></div>
     </div>
   </section>
@@ -167,8 +169,9 @@
   </div>
 </footer>
 
-<script src="js/world.js?v=20260924b"></script>
-<script src="js/data.js?v=20260924b"></script>
-<script src="js/app.js?v=20260924b"></script>
+<script src="js/world.js?v=02fec7aa"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+<script src="js/app.js?v=09879108"></script>
+<script src="js/db.js?v=889da8db" data-db="data/contestability.db?v=80d1714e" data-paper="data/paper.json?v=13351502"></script>
 </body>
 </html>

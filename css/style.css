@@ -15,6 +15,7 @@
   --s100: #0d366b; --s100-ink: #ffffff;
   --c-google: #2a78d6;
   --c-apple: #1baf7a;
+  --c-play: #d9731a;
   --good: #006300;
   --warn: #fab219;
   --warn-bg: #faf3dc;
@@ -39,6 +40,7 @@
     --s100: #6da7ec; --s100-ink: #0b0b0b;
     --c-google: #3987e5;
     --c-apple: #199e70;
+    --c-play: #e8852b;
     --good: #0ca30c;
     --warn-bg: #2b2410;
     --tt-bg: #f0efec;
@@ -846,7 +848,7 @@ tr.dim-sep td { font-size: 10px; letter-spacing: 0.06em; color: var(--ink-3); pa
 .tile-delta.flat { color: var(--ink-3); }
 .slope-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 16px; margin-top: 8px; }
 .slope-legend { grid-column: 1 / -1; display: flex; gap: 16px; font-size: 12px; color: var(--ink-2); }
-.swatch.line-0 { background: var(--c-google); } .swatch.line-1 { background: var(--c-apple); }
+.swatch.line-0 { background: var(--c-google); } .swatch.line-1 { background: var(--c-apple); } .swatch.line-2 { background: var(--c-play); }
 .slope h3 { font-size: 13px; }
 .slope-svg { width: 100%; height: auto; }
 .gridline { stroke: var(--grid); stroke-width: 1; }
@@ -854,9 +856,10 @@ tr.dim-sep td { font-size: 10px; letter-spacing: 0.06em; color: var(--ink-3); pa
 .sline { stroke-width: 2.5; fill: none; }
 .sline.line-0, .sdot.line-0, .sval.line-0 { stroke: var(--c-google); }
 .sline.line-1, .sdot.line-1, .sval.line-1 { stroke: var(--c-apple); }
+.sline.line-2, .sdot.line-2 { stroke: var(--c-play); }
 .sdot { stroke-width: 2; fill: var(--surface); }
 .sval { font-size: 10px; font-weight: 600; stroke: none; }
-.sval.line-0 { fill: var(--c-google); } .sval.line-1 { fill: var(--c-apple); }
+.sval.line-0 { fill: var(--c-google); } .sval.line-1 { fill: var(--c-apple); } .sval.line-2 { fill: var(--c-play); }
 .df-card { border: 1px solid var(--grid); border-radius: 9px; padding: 14px; margin: 12px 0; }
 .df-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
 .df-card-head h3 { margin: 0; }
@@ -900,3 +903,13 @@ table.plain th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.0
 .ribbon { background: var(--warn-bg); border-left: 3px solid var(--warn); padding: 7px 12px; font-size: 13px; border-radius: 0 6px 6px 0; display: inline-block; }
 .lead { max-width: 80ch; color: var(--ink-2); }
 .axis-note { font-size: 11px; color: var(--ink-3); margin-top: 8px; max-width: 80ch; }
+
+/* ---------------------------------------------------------------- database-backed additions (2026-09-24) */
+.load-status { margin: 18px 0; padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--surface); font-size: 14px; }
+.pill.st-missing, .pill.st-na { width: auto; padding: 0 7px; background: none; color: var(--ink-2); border: 1px dashed var(--axis); font-weight: 500; }
+.pill.st-missing { border-color: var(--warn); background: var(--warn-bg); }
+.eff-title { font-size: 15px; margin: 22px 0 6px; }
+.table-scroll { overflow-x: auto; }
+.eff-table { min-width: 640px; }
+.eff-table th.num, .eff-table td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+pre.mono { background: var(--page); border: 1px solid var(--grid); border-radius: 6px; padding: 10px 12px; overflow-x: auto; }

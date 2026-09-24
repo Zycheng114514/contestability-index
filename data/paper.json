@@ -1,0 +1,268 @@
+{
+  "note": "Figures exactly as published in DMA_Contestability.pdf (Beyond Market Concentration, Cheng/Xu/Yakout, July 2026). Transcribed 2026-09-16 from sources/data/extracted_text/DMA_Contestability.txt. This file is a citation record, never a computation input.",
+  "deJure": {
+    "table": "Table 3, p. 22",
+    "snapshot": "June 2026",
+    "rows": [
+      {
+        "code": "EU",
+        "name": "European Union",
+        "D1": 1.0,
+        "D2": 1.0,
+        "D3": 1.0,
+        "D4": 1.0,
+        "overall": 1.0
+      },
+      {
+        "code": "DE",
+        "name": "Germany",
+        "D1": 1.0,
+        "D2": 1.0,
+        "D3": 1.0,
+        "D4": 1.0,
+        "overall": 1.0
+      },
+      {
+        "code": "JP",
+        "name": "Japan",
+        "D1": 0.6,
+        "D2": 0.75,
+        "D3": 1.0,
+        "D4": 0.5,
+        "overall": 0.71
+      },
+      {
+        "code": "TR",
+        "name": "Turkey",
+        "D1": 0.2,
+        "D2": 0.38,
+        "D3": 0.83,
+        "D4": 0.33,
+        "overall": 0.44
+      },
+      {
+        "code": "CN",
+        "name": "China",
+        "D1": 0.4,
+        "D2": 0.25,
+        "D3": 0.5,
+        "D4": 0.17,
+        "overall": 0.33
+      },
+      {
+        "code": "KR",
+        "name": "Korea",
+        "D1": 0.3,
+        "D2": 0.38,
+        "D3": 0.5,
+        "D4": 0.0,
+        "overall": 0.29
+      },
+      {
+        "code": "US",
+        "name": "United States",
+        "D1": 0.3,
+        "D2": 0.25,
+        "D3": 0.0,
+        "D4": 0.17,
+        "overall": 0.18
+      },
+      {
+        "code": "UK",
+        "name": "United Kingdom",
+        "D1": 0.4,
+        "D2": 0.0,
+        "D3": 0.17,
+        "D4": 0.0,
+        "overall": 0.14
+      },
+      {
+        "code": "AU",
+        "name": "Australia",
+        "D1": 0.1,
+        "D2": 0.0,
+        "D3": 0.0,
+        "D4": 0.0,
+        "overall": 0.03
+      }
+    ]
+  },
+  "deFacto": {
+    "table": "Table 4, p. 25, with dimension figures from sections 6.1.1, 6.1.2 and 6.2",
+    "baselinePeriod": "December 2023",
+    "laterPeriod": "evidence available through 23 July 2026",
+    "rows": [
+      {
+        "market": "Mobile app distribution",
+        "ecosystem": "Apple iOS/App Store",
+        "scored": 13,
+        "applicable": 15,
+        "baseline": 0.11,
+        "later": 0.53,
+        "delta": 0.42,
+        "dims": {
+          "D1": [
+            0.1,
+            0.6
+          ],
+          "D2": [
+            0.0,
+            0.5
+          ],
+          "D3": [
+            0.0,
+            0.5
+          ],
+          "D4": [
+            0.33,
+            0.5
+          ]
+        }
+      },
+      {
+        "market": "Mobile app distribution",
+        "ecosystem": "Android/Google Play",
+        "scored": 10,
+        "applicable": 15,
+        "baseline": 0.14,
+        "later": 0.5,
+        "delta": 0.36,
+        "dims": {
+          "D1": [
+            0.3,
+            0.5
+          ],
+          "D2": [
+            0.25,
+            0.5
+          ],
+          "D3": [
+            0.0,
+            0.5
+          ],
+          "D4": [
+            0.0,
+            0.5
+          ]
+        },
+        "caution": "Only one of the four applicable D4 indicators is scored; several Missing indicators concern technical interoperability and data access."
+      },
+      {
+        "market": "Online search",
+        "ecosystem": "Google Search",
+        "scored": 11,
+        "applicable": 14,
+        "baseline": 0.36,
+        "later": 0.56,
+        "delta": 0.2,
+        "dims": {
+          "D1": [
+            0.2,
+            0.5
+          ],
+          "D2": [
+            0.75,
+            0.75
+          ],
+          "D3": [
+            0.25,
+            0.5
+          ],
+          "D4": [
+            0.25,
+            0.5
+          ]
+        }
+      }
+    ],
+    "denominatorRule": "Not Applicable indicators are excluded before determining the applicable set; applicable but Missing indicators are excluded from the numerical denominator and retained in the reported coverage measure.",
+    "datasetDivergence": {
+      "workbookIndicatorSet": "Fifteen indicators numbered Q1.1 to Q4.3 (D1 four, D2 four, D3 four, D4 three)",
+      "officialIndicatorSet": "Sixteen indicators numbered D1.1 to D4.4",
+      "note": "The dimension workbooks and the official documents do not share an indicator set, an ecosystem list, or a denominator rule. They are two different exercises, not two roundings of one."
+    }
+  },
+  "effectiveSpecifications": [
+    {
+      "id": "multiplicative",
+      "eq": "(5)",
+      "formula": "EC = C_DJ * C_DF",
+      "use": "for contestability that is both formally supported and practically realized"
+    },
+    {
+      "id": "additive",
+      "eq": "(6)",
+      "formula": "EC = lambda * C_DJ + (1 - lambda) * C_DF",
+      "use": "weighted blend of the two layers"
+    },
+    {
+      "id": "bottleneck",
+      "eq": "(7)",
+      "formula": "EC = min(C_DJ, C_DF)",
+      "use": "the binding layer governs"
+    },
+    {
+      "id": "gap",
+      "eq": "(8)",
+      "formula": "G = C_DJ - C_DF",
+      "use": "the implementation gap between law and observed conditions"
+    }
+  ],
+  "codingStates": {
+    "Scored": "sufficient evidence to assign 0, 0.5 or 1",
+    "Not Applicable": "the underlying contestability mechanism does not operate within the defined market",
+    "Missing": "the available evidence is insufficient to assign a defensible score"
+  },
+  "confidenceLevels": {
+    "High": "direct and sufficiently complete evidence",
+    "Moderate": "credible evidence with meaningful limitations",
+    "Low": "reliance on proxies, self-reported information, or incomplete public data",
+    "note": "Confidence affects the interpretation of the estimate but does not mechanically change the numerical score."
+  },
+  "dimensionQuestions": {
+    "D1": {
+      "name": "User Mobility and Switching",
+      "question": "Can users leave the incumbent and adopt alternatives?",
+      "mechanisms": "Reduces default bias, switching costs, behavioral lock-in, manipulative choice architecture, and barriers to removing services or transferring user data."
+    },
+    "D2": {
+      "name": "Rival Access and Distribution",
+      "question": "Can rivals enter, reach users, and distribute their services?",
+      "mechanisms": "Reduces restrictions on distribution, steering, commercial independence, contracting, and access to platform-controlled channels."
+    },
+    "D3": {
+      "name": "Platform Neutrality and Non-Discrimination",
+      "question": "Can rivals compete fairly after obtaining access?",
+      "mechanisms": "Limits self-preferencing, discriminatory ranking or treatment, tying, bundling, and strategic use of non-public business-user information."
+    },
+    "D4": {
+      "name": "Data, Interoperability, and Infrastructure Access",
+      "question": "Can rivals obtain the technical resources necessary to compete and scale?",
+      "mechanisms": "Reduces barriers arising from control over interfaces, infrastructure, interoperability, networks, and data; limits advantages from exclusive data accumulation and cross-service combination."
+    }
+  },
+  "reportingRequirements": {
+    "source": "Methodology Manual V3.2, section 3.1 step 6 and section 6.3",
+    "mustReport": [
+      "the overall index",
+      "the four dimension scores",
+      "the underlying mechanism scores",
+      "the observation date or period",
+      "measurement coverage and missing information",
+      "any qualifications necessary for interpretation"
+    ],
+    "traceability": "The underlying obligation-category and indicator scores must remain available so that users can trace aggregate results to the evidence and coding decisions from which they were constructed.",
+    "effectiveTogether": "Effective Contestability must be reported alongside the De Jure and De Facto measures, never on its own."
+  },
+  "handbook": {
+    "version": "Coding Handbook V4.1",
+    "ukIndex": "0.20 shown at two decimals, which is the same value the site computes as 0.196",
+    "deFactoIndicatorSet": "Sixteen indicators numbered D1.1 to D4.4 (D1 five, D2 four, D3 three, D4 four)",
+    "gatekeeperMarketPairs": [
+      "Google Search",
+      "Apple iOS App Store",
+      "Google Play / Android"
+    ],
+    "note": "The Handbook (sixteen obligation categories since 23 September 2026) agrees with this site on every de jure figure, including the United Kingdom. The paper’s published table covers fifteen categories and carries the earlier United Kingdom row."
+  }
+}

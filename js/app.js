@@ -1,6 +1,7 @@
 /* The Contestability Index — rendering and interaction.
-   Vanilla JS, no libraries. Reads window.CI_DATA and window.CI_WORLD. */
-(function () {
+   Vanilla JS. Reads window.CI_DATA, which js/db.js builds from the project database, and window.CI_WORLD.
+   db.js calls window.CI_BOOT once the database is open. */
+window.CI_BOOT = function () {
   "use strict";
   var D = window.CI_DATA, W = window.CI_WORLD;
 
@@ -17,7 +18,12 @@
     for (var k in attrs) if (attrs[k] !== undefined && attrs[k] !== null) n.setAttribute(k, attrs[k]);
     return n;
   }
-  function num(v, d) { return v === null || v === undefined ? "—" : Number(v).toFixed(d === undefined ? 2 : d); }
+  // Rounded half up, as the Handbook and the paper print (0.475 -> 0.48); toFixed alone would give 0.47.
+  function num(v, d) {
+    if (v === null || v === undefined) return "—";
+    var p = d === undefined ? 2 : d, k = Math.pow(10, p), s = v < 0 ? -1 : 1;
+    return (s * Math.round(Math.abs(v) * k + 1e-9) / k).toFixed(p);
+  }
   function glyph(v) { return v === 1 ? "1" : v === 0.5 ? "½" : v === 0 ? "0" : "—"; }
   function tier(v) { return v === 1 ? "s100" : v === 0.5 ? "s50" : "s0"; }
   function pretty(s) {
@@ -51,19 +57,22 @@
     "De jure snapshot " + D.meta.evidenceDate + " · " + D.meta.mechanismCount +
     " obligation categories × " + D.meta.jurisdictionCount + " jurisdictions = " +
     D.meta.totalCells + " assessments · " + D.meta.extractCount +
-    " verbatim legal extracts · data generated " + D.meta.generated;
+    " verbatim legal extracts · database built " + D.meta.built;
 
-  var pending = (D.meta.reviewCounts.needs_review || 0) + (D.meta.reviewCounts.coded || 0);
-  if (pending > 0) {
-    $("#ribbon").hidden = false;
-    $("#ribbon-text").textContent = " Preliminary — " + pending + " of " + D.meta.totalCells +
-      " assessments are pending review or not yet verified; those scores may change.";
+  $("#ribbon").hidden = false;
+  $("#ribbon-text").textContent = " Preliminary — the figures on this site may still change.";
+
+  function dbLink(text) {
+    var a = el("a", null, text);
+    a.setAttribute("href", D.meta.dbUrl);
+    a.setAttribute("download", "contestability.db");
+    return a;
   }
-
-  $("#footer-note").textContent =
-    "De jure scores are generated from the master coding sheet and cross-checked cell by cell against the " +
-    "project database. De facto figures come from the dimension workbooks. Regenerate with " +
-    "python3 website/build/build_site_data.py. Published figures shown for comparison are transcribed from the paper.";
+  var footNote = $("#footer-note");
+  footNote.textContent = "Every figure on this site is computed in your browser from the project database, ";
+  footNote.appendChild(dbLink("contestability.db"));
+  footNote.appendChild(document.createTextNode(
+    " (SQLite), which you can download. Published figures shown for comparison are transcribed from the paper."));
 
   /* ------------------------------------------------------------ tabs */
   var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
@@ -112,16 +121,23 @@
 
   /* ========================================================== OVERVIEW */
 
-  /* -- the implementation gap (paper specification 8: G = C_DJ - C_DF) -- */
+  /* -- the two layers side by side, and the paper's four ways of relating them (section 3.5) -- */
+  var unitById = {};
+  D.deFacto.units.forEach(function (u) { unitById[u.id] = u; });
+  function effOf(unit, period) {
+    return D.effective.filter(function (e) { return e.unit === unit && e.period === period; })[0];
+  }
+
   (function renderGap() {
     var host = $("#gap");
-    if (!D.effective || !D.effective.length) return;
-    var table = el("div", "gap-list");
-    D.effective.forEach(function (e) {
+    var list = el("div", "gap-list");
+    D.deFacto.units.forEach(function (u) {
+      var e = effOf(u.id, "current");
+      if (!e) return;
       var row = el("div", "gap-row");
       var head = el("div", "gap-head");
-      head.appendChild(el("strong", null, e.name));
-      head.appendChild(el("span", "muted small", " · " + e.market));
+      head.appendChild(el("strong", null, u.name));
+      head.appendChild(el("span", "muted small", " · " + u.market));
       row.appendChild(head);
 
       [["De jure — what the law mandates", e.deJure, "dj"],
@@ -137,17 +153,43 @@
         row.appendChild(line);
       });
 
-      var g = e.deJure - e.deFacto;
       var foot = el("p", "gap-foot");
-      foot.appendChild(el("strong", null, "Implementation gap " + num(g)));
+      foot.appendChild(el("strong", null, "Implementation gap " + num(e.gap)));
       foot.appendChild(document.createTextNode(
-        " · the paper defines this as G = Cᴰᴶ − Cᴰᴼ, one of four ways it offers " +
-        "for relating the two layers. Multiplying them instead gives " + num(e.deJure * e.deFacto) +
-        "; taking the binding layer gives " + num(Math.min(e.deJure, e.deFacto)) + "."));
+        " · product " + num(e.multiplicative) + " · arithmetic mean " + num(e.arithmetic) +
+        " · binding layer " + num(e.bottleneck)));
       row.appendChild(foot);
-      table.appendChild(row);
+      list.appendChild(row);
     });
-    host.appendChild(table);
+    host.appendChild(list);
+
+    host.appendChild(el("h3", "eff-title", "The four specifications, at both observation dates"));
+    var wrap = el("div", "table-scroll");
+    var t = el("table", "plain eff-table");
+    var hr = el("tr");
+    ["Gatekeeper–market", "Observed", "De jure", "De facto", "Product (5)",
+     "Arithmetic, λ = " + D.meta.lambda + " (6)", "Binding layer (7)", "Gap (8)"]
+      .forEach(function (x, i) { hr.appendChild(el("th", i > 1 ? "num" : null, x)); });
+    t.appendChild(hr);
+    D.effective.forEach(function (e) {
+      var tr = el("tr");
+      tr.appendChild(el("td", null, (unitById[e.unit] || {}).name || e.unit));
+      tr.appendChild(el("td", "small", e.period === "baseline" ? "December 2023"
+        : "June 2026 (de jure), July 2026 (de facto)"));
+      [e.deJure, e.deFacto, e.multiplicative, e.arithmetic, e.bottleneck, e.gap].forEach(function (v) {
+        tr.appendChild(el("td", "num", num(v)));
+      });
+      t.appendChild(tr);
+    });
+    wrap.appendChild(t);
+    host.appendChild(wrap);
+    var noBase = D.effective.filter(function (e) { return e.deJure === null; })
+      .map(function (e) { return (unitById[e.unit] || {}).name; });
+    host.appendChild(el("p", "small muted",
+      "Equation numbers are the paper's. The paper uses the product for contestability that is both formally " +
+      "supported and practically realised; the arithmetic mean treats the layers as partly substitutable; the " +
+      "binding layer takes the weaker of the two; the gap is descriptive and is not a composite." +
+      (noBase.length ? " " + noBase.join(", ") + " has no December 2023 de jure baseline, so its baseline row shows the de facto score only." : "")));
   })();
 
   /* ---------------------------- world map ---------------------------- */
@@ -264,7 +306,7 @@
     var host = $("#dimgrid");
     D.dimensions.forEach(function (d) {
       var p = el("div", "dim-panel");
-      p.appendChild(el("h3", null, d.id + " · " + d.deJureName));
+      p.appendChild(el("h3", null, d.id + " · " + d.name));
       var q = (D.paper.dimensionQuestions || {})[d.id];
       if (q) p.appendChild(el("p", "dim-q muted small", q.question));
       ranked.forEach(function (code) {
@@ -309,7 +351,7 @@
       return b;
     }
     chips.appendChild(chip("All dimensions", null));
-    D.dimensions.forEach(function (d) { chips.appendChild(chip(d.id + " " + d.deJureName, d.id)); });
+    D.dimensions.forEach(function (d) { chips.appendChild(chip(d.id + " " + d.name, d.id)); });
     host.appendChild(chips);
 
     var sel = el("select", "jur-select");
@@ -406,7 +448,7 @@
     D.dimensions.forEach(function (d) {
       if (dimFilter && dimFilter !== d.id) return;
       var sep = el("tr", "dim-sep");
-      var sc = el("td", null, d.id + " — " + d.deJureName.toUpperCase());
+      var sc = el("td", null, d.id + " — " + d.name.toUpperCase());
       sc.colSpan = ranked.length + 1;
       sep.appendChild(sc);
       tbody.appendChild(sep);
@@ -486,10 +528,12 @@
     panel.appendChild(close);
 
     panel.appendChild(el("p", "crumb",
-      m.dimension + " — " + dimById[m.dimension].deJureName +
+      m.dimension + " — " + dimById[m.dimension].name +
       " · category " + m.id + " of " + D.mechanisms.length));
     panel.appendChild(el("h2", null, m.name));
     if (m.description) panel.appendChild(el("p", "mech-desc muted", m.description));
+    if (m.code) panel.appendChild(el("p", "small muted",
+      "Observed in the de facto layer as indicator " + m.code + ", " + m.indicator + "."));
     panel.appendChild(el("p", "jname", jurName[code]));
 
     var fr = el("div", "factor-row");
@@ -579,12 +623,7 @@
         " — instruments that have not entered into force score zero on Existence."));
     }
 
-    var st = el("p", "status-line");
-    var rs = c.review_status || "";
-    st.appendChild(el("span", "badge " + (rs === "needs_review" ? "needs" : "ok"),
-      rs === "needs_review" ? "⚠ Needs review" : "✓ " + pretty(rs.replace(/_/g, " "))));
-    st.appendChild(document.createTextNode(" · evidence as of " + c.evidence_date));
-    panel.appendChild(st);
+    if (c.evidence_date) panel.appendChild(el("p", "status-line", "Evidence as of " + c.evidence_date));
 
     var hint = el("p", "navhint");
     hint.append("Navigate: ");
@@ -645,109 +684,76 @@
   /* ========================================================== DE FACTO */
 
   var DF = D.deFacto;
-  var cpsById = {};
-  DF.cps.forEach(function (c) { cpsById[c.id] = c; });
-  var scheme = "Equal weights";
   var dfDim = "D1";
+  var LINE = {};
+  DF.units.forEach(function (u, i) { LINE[u.id] = "line-" + i; });
+  function dfIdx(u, p) { return DF.index["de_facto|" + u + "|" + p]; }
 
   $("#df-note").textContent =
-    "Two core platform services in the European Union, each scored on fifteen sub-indicators across the " +
-    "four dimensions, at two points in time: a December 2023 baseline immediately before the principal " +
-    "Digital Markets Act obligations became applicable, and a later observation. The comparison is " +
-    "descriptive. It does not identify a causal effect of the regulation.";
+    "Three gatekeeper–market pairs in the European Union (" +
+    DF.units.map(function (u) { return u.name; }).join(", ") +
+    "), each coded on the same sixteen indicators, one for each contestability mechanism, at two points in time: " +
+    "a December 2023 baseline, before the principal Digital Markets Act obligations applied, and a July 2026 " +
+    "observation. An indicator whose mechanism does not operate in the market is Not Applicable and is left out; " +
+    "one that applies but lacks the evidence to score it is Missing and is left out of the denominator. The " +
+    "comparison is descriptive. It does not identify a causal effect of the regulation.";
 
-  (function paperBanner() {
+  (function paperCompare() {
     var host = $("#view-defacto");
-    var box = el("div", "callout danger-callout");
-    box.appendChild(el("strong", null, "This dataset is not the one published in the paper. "));
-    box.appendChild(document.createTextNode(D.paper.deFactoStructural.note + " "));
-    var dv = D.paper.deFactoDivergence || {};
+    var cmp = D.paper.deFactoCompare || [];
+    var differ = cmp.filter(function (c) { return !c.same; });
+    var box = el("div", "callout" + (differ.length ? " warn-callout" : ""));
+    box.appendChild(el("strong", null, differ.length
+      ? "Compared with the paper's Table 4, " + differ.length + " of " + cmp.length + " observations differ. "
+      : "These figures reproduce the paper's Table 4. "));
     box.appendChild(document.createTextNode(
-      "The indicator sets also differ: these workbooks carry " + (dv.workbookIndicatorSet || "") +
-      ", while the official documents use " + (dv.officialIndicatorSet || "") + ". " + (dv.note || "")));
+      "The paper and this database use the same sixteen indicators and the same denominator rule; the database " +
+      "holds the current coding, and the paper's table reflects an earlier state of it."));
     var ul = el("ul", "small");
-    D.paper.deFacto.rows.forEach(function (r) {
-      ul.appendChild(el("li", null, "Paper: " + r.ecosystem + " · " + r.scored + " of " + r.applicable +
-        " indicators scored · " + num(r.baseline) + " → " + num(r.later) + " (Δ " + num(r.delta) + ")"));
-    });
-    DF.cps.forEach(function (c) {
-      var i = DF.index[c.id];
-      ul.appendChild(el("li", "muted", "This dataset: " + c.name + " · 15 of 15 · " +
-        num(i.pre) + " → " + num(i.post) + " (Δ " + num(i.delta) + ")"));
+    cmp.forEach(function (c) {
+      ul.appendChild(el("li", c.same ? "muted" : null,
+        c.name + " — paper: " + c.paper.scored + " of " + c.paper.applicable + " applicable indicators scored, " +
+        num(c.paper.baseline) + " → " + num(c.paper.later) + "; this database: " + c.ours.scored + " of " +
+        c.ours.applicable + ", " + num(c.ours.pre) + " → " + num(c.ours.post) + (c.same ? " (identical)" : "")));
     });
     box.appendChild(ul);
     host.insertBefore(box, host.children[2]);
   })();
 
-  (function schemeSwitch() {
-    var host = $("#scheme-switch");
-    DF.schemes.forEach(function (s) {
-      var b = el("button", "chip" + (s.name === scheme ? " on" : ""), s.name);
-      b.type = "button";
-      b.setAttribute("aria-pressed", s.name === scheme ? "true" : "false");
-      b.setAttribute("title", "Weights " + s.w.join(" / "));
-      b.addEventListener("click", function () {
-        scheme = s.name;
-        Array.prototype.forEach.call(host.children, function (c) {
-          var on = c.textContent === scheme;
-          c.classList.toggle("on", on);
-          c.setAttribute("aria-pressed", on ? "true" : "false");
-        });
-        renderTiles();
-      });
-      host.appendChild(b);
-    });
-  })();
-
-  function renderTiles() {
+  (function renderTiles() {
     var host = $("#df-tiles");
-    host.textContent = "";
     var grid = el("div", "tile-grid");
-    DF.cps.forEach(function (c) {
-      var w = (DF.weighted[c.id] || {})[scheme] || DF.index[c.id];
+    DF.units.forEach(function (u) {
+      var pre = dfIdx(u.id, "baseline"), post = dfIdx(u.id, "current");
       var t = el("div", "tile");
-      t.appendChild(el("div", "tile-label", c.name));
-      t.appendChild(el("div", "tile-sub muted small", c.gatekeeper + " · " + c.market));
-      t.appendChild(el("div", "tile-value", num(w.post)));
-      var delta = w.post - w.pre;
+      t.appendChild(el("div", "tile-label", u.name));
+      t.appendChild(el("div", "tile-sub muted small", u.gatekeeper + " · " + u.market));
+      t.appendChild(el("div", "tile-value", num(post.index)));
+      var delta = post.index - pre.index;
       var d = el("div", "tile-delta " + (delta > 0 ? "up" : "flat"));
-      d.textContent = (delta > 0 ? "▲ +" : "") + num(delta) + " vs " + num(w.pre) + " at the baseline";
+      d.textContent = (delta > 0 ? "▲ +" : "") + num(delta) + " vs " + num(pre.index) + " at the baseline";
       t.appendChild(d);
-      t.appendChild(el("div", "small muted", "Weights " +
-        (DF.schemes.filter(function (s) { return s.name === scheme; })[0] || { w: [] }).w.join(" / ")));
+      t.appendChild(el("div", "small muted", post.nScored + " of " + post.nApplicable +
+        " applicable indicators scored (" + post.nItems + " in the set)"));
       grid.appendChild(t);
     });
     host.appendChild(grid);
-
-    var note = el("p", "axis-note");
-    var dirs = DF.cps.map(function (c) {
-      var vals = DF.schemes.map(function (s) {
-        var w = (DF.weighted[c.id] || {})[s.name];
-        return w ? w.post - w.pre : 0;
-      });
-      return Math.min.apply(null, vals) > 0;
-    });
-    note.textContent = dirs.every(Boolean)
-      ? "Every weighting scheme produces a positive change for both services, so the direction of the result does not depend on the weights."
-      : "The direction of the change is not stable across weighting schemes; read the individual schemes before drawing a conclusion.";
-    host.appendChild(note);
-  }
-  renderTiles();
+  })();
 
   (function renderSlopes() {
     var host = $("#slopes");
     var legend = el("div", "slope-legend");
-    DF.cps.forEach(function (c, i) {
+    DF.units.forEach(function (u) {
       var k = el("span", "key");
-      k.appendChild(el("span", "swatch line-" + i));
-      k.appendChild(el("span", null, c.name));
+      k.appendChild(el("span", "swatch " + LINE[u.id]));
+      k.appendChild(el("span", null, u.name));
       legend.appendChild(k);
     });
     host.appendChild(legend);
 
     D.dimensions.forEach(function (d) {
       var box = el("div", "slope");
-      box.appendChild(el("h3", null, d.id + " · " + (d.deFactoName || d.deJureName)));
+      box.appendChild(el("h3", null, d.id + " · " + d.name));
       var w = 300, h = 190, pad = { t: 16, r: 54, b: 26, l: 40 };
       var s = svg("svg", { viewBox: "0 0 " + w + " " + h, class: "slope-svg", role: "img" });
       var x0 = pad.l, x1 = w - pad.r, y0 = h - pad.b, y1 = pad.t;
@@ -763,30 +769,46 @@
         t.textContent = p[1];
         s.appendChild(t);
       });
-      var desc = [];
-      DF.cps.forEach(function (c, i) {
-        var comp = (DF.composites[c.id] || {})[d.id];
-        if (!comp) return;
-        s.appendChild(svg("line", { x1: x0, y1: Y(comp.pre), x2: x1, y2: Y(comp.post), class: "sline line-" + i }));
-        s.appendChild(svg("circle", { cx: x0, cy: Y(comp.pre), r: 4, class: "sdot line-" + i }));
-        s.appendChild(svg("circle", { cx: x1, cy: Y(comp.post), r: 4, class: "sdot line-" + i }));
-        var lab = svg("text", { x: x1 + 6, y: Y(comp.post) + 4, class: "sval line-" + i });
-        lab.textContent = num(comp.post);
-        s.appendChild(lab);
-        var lab0 = svg("text", { x: x0 - 6, y: Y(comp.pre) - 8, class: "sval line-" + i, "text-anchor": "end" });
-        lab0.textContent = num(comp.pre);
-        s.appendChild(lab0);
-        desc.push(c.name + " " + num(comp.pre) + " to " + num(comp.post));
+      var desc = [], labelled = { pre: {}, post: {} };
+      DF.units.forEach(function (u) {
+        var a = dfIdx(u.id, "baseline").dims[d.id], b = dfIdx(u.id, "current").dims[d.id];
+        if (!a || !b || a.score === null || b.score === null) return;
+        var cls = LINE[u.id];
+        s.appendChild(svg("line", { x1: x0, y1: Y(a.score), x2: x1, y2: Y(b.score), class: "sline " + cls }));
+        s.appendChild(svg("circle", { cx: x0, cy: Y(a.score), r: 4, class: "sdot " + cls }));
+        s.appendChild(svg("circle", { cx: x1, cy: Y(b.score), r: 4, class: "sdot " + cls }));
+        // Pairs that share a value share one label, so coinciding labels do not print on top of each other.
+        if (!labelled.post[num(b.score)]) {
+          labelled.post[num(b.score)] = true;
+          var lab = svg("text", { x: x1 + 6, y: Y(b.score) + 4, class: "sval " + cls });
+          lab.textContent = num(b.score);
+          s.appendChild(lab);
+        }
+        if (!labelled.pre[num(a.score)]) {
+          labelled.pre[num(a.score)] = true;
+          var lab0 = svg("text", { x: x0 - 6, y: Y(a.score) - 8, class: "sval " + cls, "text-anchor": "end" });
+          lab0.textContent = num(a.score);
+          s.appendChild(lab0);
+        }
+        desc.push(u.name + " " + num(a.score) + " to " + num(b.score));
       });
-      s.setAttribute("aria-label", d.id + " " + (d.deFactoName || "") + ": " + desc.join("; "));
+      s.setAttribute("aria-label", d.id + " " + d.name + ": " + desc.join("; "));
       box.appendChild(s);
 
-      var subs = DF.subs.filter(function (x) { return x.dim === d.id; });
-      var lows = subs.filter(function (x) { return x.confidence.indexOf("LOW") === 0; }).length;
-      var n = (DF.composites[DF.cps[0].id][d.id] || {}).n;
+      // Name the pairs whose lines lie exactly on top of each other, so a hidden line is not read as missing.
+      var same = {};
+      DF.units.forEach(function (u) {
+        var a = dfIdx(u.id, "baseline").dims[d.id], b = dfIdx(u.id, "current").dims[d.id];
+        var k = num(a.score) + "|" + num(b.score);
+        (same[k] = same[k] || []).push(u.name);
+      });
+      var overlap = Object.keys(same).filter(function (k) { return same[k].length > 1; })
+        .map(function (k) { return same[k].join(" and ") + " coincide"; });
       var f = el("p", "small muted");
-      f.textContent = "Mean of " + n + " sub-indicators" +
-        (lows ? " · " + lows + " of " + subs.length + " observations carry low confidence" : "");
+      f.textContent = "Mean of the scored indicators · " + DF.units.map(function (u) {
+        var b = dfIdx(u.id, "current").dims[d.id];
+        return u.name + " " + b.nScored + " of " + b.nApplicable;
+      }).join(" · ") + (overlap.length ? ". Lines drawn on top of each other: " + overlap.join("; ") + "." : "");
       box.appendChild(f);
       host.appendChild(box);
     });
@@ -795,7 +817,7 @@
   (function dfChips() {
     var host = $("#df-dim-chips");
     D.dimensions.forEach(function (d) {
-      var b = el("button", "chip" + (d.id === dfDim ? " on" : ""), d.id + " " + (d.deFactoName || d.deJureName));
+      var b = el("button", "chip" + (d.id === dfDim ? " on" : ""), d.id + " " + d.name);
       b.type = "button";
       b.setAttribute("aria-pressed", d.id === dfDim ? "true" : "false");
       b.addEventListener("click", function () {
@@ -815,52 +837,60 @@
     var cls = v.indexOf("LOW") === 0 ? "conf-low" : v === "MODERATE" ? "conf-mod" : "conf-high";
     return el("span", "badge " + cls, v.replace("-", "–"));
   }
+  function statusPill(it, v) {
+    if (it.status === "missing") return el("span", "pill st-missing", "Missing");
+    if (it.status === "not_applicable") return el("span", "pill st-na", "N/A");
+    return el("span", "pill " + tier(v), glyph(v));
+  }
 
   function renderDfDetail() {
     var host = $("#df-detail");
     host.textContent = "";
-    DF.cps.forEach(function (c) {
-      var comp = (DF.composites[c.id] || {})[dfDim];
+    DF.units.forEach(function (u) {
+      var a = dfIdx(u.id, "baseline").dims[dfDim], b = dfIdx(u.id, "current").dims[dfDim];
       var card = el("div", "df-card");
       var head = el("div", "df-card-head");
-      head.appendChild(el("h3", null, c.name));
-      if (comp) head.appendChild(el("span", "muted small",
-        "composite " + num(comp.pre) + " → " + num(comp.post)));
+      head.appendChild(el("h3", null, u.name));
+      head.appendChild(el("span", "muted small", dfDim + " " + num(a.score) + " → " + num(b.score) + " · " +
+        b.nScored + " of " + b.nApplicable + " applicable indicators scored"));
       card.appendChild(head);
 
-      DF.subs.filter(function (s) { return s.cps === c.id && s.dim === dfDim; }).forEach(function (s) {
+      DF.items.filter(function (it) { return it.unit === u.id && it.dim === dfDim; }).forEach(function (it) {
+        var m = mechById[it.mechanism];
         var det = el("details", "subrow");
         var sum = el("summary");
-        sum.appendChild(el("span", "sub-id", s.id));
-        sum.appendChild(el("span", "sub-label", s.label));
-        sum.appendChild(el("span", "pill " + tier(s.pre), glyph(s.pre)));
-        sum.appendChild(el("span", "arrow", "→"));
-        sum.appendChild(el("span", "pill " + tier(s.post), glyph(s.post)));
-        sum.appendChild(el("span", "sub-delta " + (s.delta > 0 ? "up" : "flat"),
-          s.delta > 0 ? "+" + num(s.delta) : "±0"));
-        sum.appendChild(confBadge(s.confidence));
+        sum.appendChild(el("span", "sub-id", m.code));
+        sum.appendChild(el("span", "sub-label", m.indicator));
+        sum.appendChild(statusPill(it, it.pre));
+        if (it.status === "scored") {
+          sum.appendChild(el("span", "arrow", "→"));
+          sum.appendChild(statusPill(it, it.post));
+          sum.appendChild(el("span", "sub-delta " + (it.delta > 0 ? "up" : "flat"),
+            it.delta > 0 ? "+" + num(it.delta) : "±0"));
+          if (it.confidence) sum.appendChild(confBadge(it.confidence));
+        }
         det.appendChild(sum);
 
         var body = el("div", "subbody");
-        body.appendChild(el("h5", null, "Baseline evidence, December 2023"));
-        body.appendChild(el("p", null, s.preEvidence || "—"));
-        body.appendChild(el("h5", null, "Later evidence"));
-        body.appendChild(el("p", null, s.postEvidence || "—"));
-        if (s.sources) {
+        body.appendChild(el("h5", null, "Evidence and scoring rationale"));
+        body.appendChild(el("p", null, it.evidence || "—"));
+        if (it.sources.length) {
           body.appendChild(el("h5", null, "Sources"));
-          body.appendChild(el("p", "small", s.sources));
-        }
-        if (s.links && s.links.length) {
-          body.appendChild(el("h5", null, "Source links"));
           var ul = el("ul", "link-list");
-          s.links.forEach(function (l) {
+          it.sources.forEach(function (l) {
             var li = el("li");
-            li.appendChild(extLink(l.url, l.name));
-            li.appendChild(el("span", "muted small", " · " + domain(l.url)));
+            if (l.url) {
+              li.appendChild(extLink(l.url, l.title));
+              li.appendChild(el("span", "muted small", " · " + domain(l.url)));
+            } else {
+              li.appendChild(el("span", null, l.title + " (no link recorded)"));
+            }
             ul.appendChild(li);
           });
           body.appendChild(ul);
         }
+        body.appendChild(el("p", "small muted", "The same mechanism in the de jure layer: category " + m.id +
+          ", " + m.name + "."));
         det.appendChild(body);
         card.appendChild(det);
       });
@@ -873,21 +903,33 @@
     var host = $("#obligation-map");
     var t = el("table", "plain");
     var head = el("tr");
-    ["Service", "Article", "Obligation", "Dimension", "Channel"].forEach(function (h) {
-      head.appendChild(el("th", null, h));
-    });
+    ["Dimension", "DMA obligations observed", "Indicators"].forEach(function (x) { head.appendChild(el("th", null, x)); });
     t.appendChild(head);
-    DF.obligationMap.forEach(function (o) {
+    D.dimensions.forEach(function (d) {
       var tr = el("tr");
-      tr.appendChild(el("td", "small", (cpsById[o.cps] || {}).name || o.cps));
-      tr.appendChild(el("td", null, o.article));
-      tr.appendChild(el("td", "small", o.summary));
-      tr.appendChild(el("td", null, o.dims));
-      tr.appendChild(el("td", "small muted", o.channel));
-      tr.setAttribute("title", o.rationale || "");
+      tr.appendChild(el("td", null, d.id + " · " + d.name));
+      var td = el("td", "small");
+      d.dmaObligations.split(/;\s*/).filter(Boolean).forEach(function (o) { td.appendChild(el("div", null, o.trim())); });
+      tr.appendChild(td);
+      tr.appendChild(el("td", "small muted", D.mechanisms.filter(function (m) { return m.dimension === d.id; })
+        .map(function (m) { return m.code + " " + m.indicator; }).join(" · ")));
       t.appendChild(tr);
     });
     host.appendChild(t);
+    var gen = [];
+    DF.units.forEach(function (u) {
+      (DF.generalSources[u.id] || []).forEach(function (s) {
+        if (gen.every(function (g) { return g.url !== s.url; })) gen.push(s);
+      });
+    });
+    if (gen.length) {
+      var p = el("p", "small muted", "Cited for every observation: ");
+      gen.forEach(function (s, i) {
+        if (i) p.appendChild(document.createTextNode("; "));
+        p.appendChild(s.url ? extLink(s.url, s.title) : document.createTextNode(s.title));
+      });
+      host.appendChild(p);
+    }
   })();
 
   /* ========================================================== MARKETS */
@@ -978,35 +1020,38 @@
     var host = $("#market-dj");
     var rows = D.markets.deJure;
     if (!rows.length) { host.appendChild(el("p", "muted", "No market-level scoring on file.")); return; }
-    var markets = [];
-    rows.forEach(function (r) { if (markets.indexOf(r.market) === -1) markets.push(r.market); });
-    markets.forEach(function (mk) {
-      var sub = rows.filter(function (r) { return r.market === mk; });
-      var card = el("div", "df-card");
-      var mean = sub.reduce(function (a, r) { return a + r.score; }, 0) / sub.length;
-      var head = el("div", "df-card-head");
-      head.appendChild(el("h3", null, mk + " · " + sub[0].service));
-      head.appendChild(el("span", "muted small", sub.length + " categories · mean " + num(mean)));
-      card.appendChild(head);
-      sub.forEach(function (r) {
-        var m = mechById[r.mechanism] || { name: "Category " + r.mechanism };
-        var det = el("details", "subrow");
-        var sum = el("summary");
-        sum.appendChild(el("span", "sub-id", String(r.mechanism)));
-        sum.appendChild(el("span", "sub-label", m.name));
-        sum.appendChild(el("span", "pill " + tier(r.score), glyph(r.score)));
-        sum.appendChild(el("span", "muted small", r.provision || ""));
-        det.appendChild(sum);
-        var body = el("div", "subbody");
-        body.appendChild(el("p", "small", "min(E " + r.existence + ", S " + r.scope + ", Enf " + r.enforceability + ") = " + r.score +
-          " · legal form " + r.form + " · " + pretty(r.applicability)));
-        if (r.hook) { body.appendChild(el("h5", null, "What makes it apply to this market")); body.appendChild(el("p", null, r.hook)); }
-        if (r.extract) { body.appendChild(el("h5", null, "Verbatim")); body.appendChild(el("blockquote", null, r.extract)); }
-        if (r.rationale) { body.appendChild(el("h5", null, "Rationale")); body.appendChild(el("p", null, r.rationale)); }
-        det.appendChild(body);
-        card.appendChild(det);
+    var PERIOD = { current: "June 2026", baseline: "December 2023 baseline" };
+    D.deFacto.units.forEach(function (u) {
+      ["current", "baseline"].forEach(function (p) {
+        var sub = rows.filter(function (r) { return r.unit === u.id && r.period === p; });
+        if (!sub.length) return;
+        var idx = D.markets.index["de_jure|" + u.id + "|" + p];
+        var card = el("div", "df-card");
+        var head = el("div", "df-card-head");
+        head.appendChild(el("h3", null, u.market + " · " + u.name + " · " + PERIOD[p]));
+        head.appendChild(el("span", "muted small", sub.length + " categories · index " + num(idx && idx.index)));
+        card.appendChild(head);
+        if (sub[0].note) card.appendChild(el("p", "small muted", sub[0].note));
+        sub.forEach(function (r) {
+          var m = mechById[r.mechanism] || { name: "Category " + r.mechanism };
+          var det = el("details", "subrow");
+          var sum = el("summary");
+          sum.appendChild(el("span", "sub-id", String(r.mechanism)));
+          sum.appendChild(el("span", "sub-label", m.name));
+          sum.appendChild(el("span", "pill " + tier(r.score), glyph(r.score)));
+          sum.appendChild(el("span", "muted small", r.provision || ""));
+          det.appendChild(sum);
+          var body = el("div", "subbody");
+          body.appendChild(el("p", "small", "min(E " + r.existence + ", S " + r.scope + ", Enf " + r.enforceability +
+            ") = " + r.score + " · legal form " + r.form + " · " + pretty(r.applicability)));
+          if (r.hook) { body.appendChild(el("h5", null, "What makes it apply to this market")); body.appendChild(el("p", null, r.hook)); }
+          if (r.extract) { body.appendChild(el("h5", null, "Verbatim")); body.appendChild(el("blockquote", null, r.extract)); }
+          if (r.rationale) { body.appendChild(el("h5", null, "Rationale")); body.appendChild(el("p", null, r.rationale)); }
+          det.appendChild(body);
+          card.appendChild(det);
+        });
+        host.appendChild(card);
       });
-      host.appendChild(card);
     });
   })();
 
@@ -1024,9 +1069,10 @@
       "defined market. Any combination of the two is a derived summary, not a separately observed quantity.");
 
     head("Relating the two layers");
-    para("There is no uniquely correct way to combine a de jure and a de facto score. Four " +
-      "specifications are available, and this site uses the implementation gap on the front page " +
-      "because it keeps both components visible rather than collapsing them.");
+    para("There is no uniquely correct way to combine a de jure and a de facto score. The paper gives four " +
+      "specifications and uses the product for contestability that is both formally supported and practically " +
+      "realised. The front page reports all four for every gatekeeper–market pair, with the arithmetic mean at " +
+      "λ = " + D.meta.lambda + " (equal weighting), and keeps the two component scores visible beside them.");
     var st = el("table", "plain");
     var sh = el("tr");
     ["Specification", "Formula", "When it is appropriate"].forEach(function (x) { sh.appendChild(el("th", null, x)); });
@@ -1043,15 +1089,17 @@
     head("The four dimensions");
     var dt = el("table", "plain");
     var dh = el("tr");
-    ["", "De jure name", "De facto name", "Categories"].forEach(function (x) { dh.appendChild(el("th", null, x)); });
+    ["", "Dimension", "De jure category = de facto indicator"].forEach(function (x) { dh.appendChild(el("th", null, x)); });
     dt.appendChild(dh);
     D.dimensions.forEach(function (d) {
       var tr = el("tr");
       tr.appendChild(el("td", null, d.id));
-      tr.appendChild(el("td", null, d.deJureName));
-      tr.appendChild(el("td", "muted", d.deFactoName || "—"));
-      tr.appendChild(el("td", "small", D.mechanisms.filter(function (m) { return m.dimension === d.id; })
-        .map(function (m) { return m.id + ". " + m.name; }).join(" · ")));
+      tr.appendChild(el("td", null, d.name));
+      var td = el("td", "small");
+      D.mechanisms.filter(function (m) { return m.dimension === d.id; }).forEach(function (m) {
+        td.appendChild(el("div", null, m.id + ". " + m.name + " = " + m.code + " " + m.indicator));
+      });
+      tr.appendChild(td);
       dt.appendChild(tr);
     });
     h.appendChild(dt);
@@ -1089,8 +1137,8 @@
       "with fewer applicable indicators has a smaller denominator rather than implicit zeros. The index " +
       "is the equal-weighted mean of the four dimension scores. Equal weighting is the benchmark because " +
       "it is transparent and reproducible and imposes no assumption about the relative economic " +
-      "importance of the four channels. Alternative weights belong in a robustness exercise, which is " +
-      "why the de facto page offers them as a switch rather than as a silent substitution.");
+      "importance of the four channels. Alternative weights belong in a robustness exercise; this site " +
+      "reports the equal-weight benchmark only.");
 
     head("Why this site is built as a drill-down");
     var rr = D.paper.reportingRequirements || {};
@@ -1101,7 +1149,7 @@
     h.appendChild(rl);
     if (rr.traceability) para(rr.traceability);
     if (rr.effectiveTogether) para(rr.effectiveTogether + " That is why the front page shows the " +
-      "two component scores as bars and states the gap between them, rather than presenting a single " +
+      "two component scores as bars beside all four ways of combining them, rather than presenting a single " +
       "composite number on its own.");
 
     head("Legal-form taxonomy");
@@ -1153,10 +1201,15 @@
       }
       h.appendChild(box);
     }
-    var box2 = el("div", "callout danger-callout");
-    box2.appendChild(el("strong", null, "De facto: this site's dataset and the paper's are different exercises. "));
-    box2.appendChild(document.createTextNode(D.paper.deFactoStructural.note +
-      " The published figures are reproduced on the de facto page for comparison; they are not recomputed here."));
+    var cmp = D.paper.deFactoCompare || [];
+    var dfDiffer = cmp.filter(function (c) { return !c.same; });
+    var box2 = el("div", "callout" + (dfDiffer.length ? " warn-callout" : ""));
+    box2.appendChild(el("strong", null, "De facto: " + (dfDiffer.length
+      ? dfDiffer.length + " of " + cmp.length + " observations differ from the paper's Table 4. "
+      : "the figures reproduce the paper's Table 4. ")));
+    box2.appendChild(document.createTextNode("Both use the same sixteen indicators and the same denominator rule. " +
+      (dfDiffer.length ? "The differing observations are " + dfDiffer.map(function (c) { return c.name; }).join(" and ") +
+       "; the published figures are listed on the de facto page next to the current ones." : "")));
     h.appendChild(box2);
 
     head("Limitations");
@@ -1173,13 +1226,23 @@
     h.appendChild(lim);
 
     head("Reproducing these numbers");
-    para("The de jure scores on this site are generated from the master coding sheet and cross-checked " +
-      "cell by cell against the project database; the build refuses to write a data file if the two " +
-      "disagree, if any factor falls outside the three-point grid, if any score breaks the minimum rule, " +
-      "or if the number of cells is not the number of categories times the number of jurisdictions.");
+    var rp = el("p");
+    rp.appendChild(document.createTextNode("Every figure on this site is computed in your browser from the project " +
+      "database, which you can download: "));
+    rp.appendChild(dbLink("contestability.db"));
+    rp.appendChild(document.createTextNode(" (SQLite). Each score, de jure or de facto, is one row of the table " +
+      "assessments, with the same columns in both layers; dimension scores, indices and the four Effective " +
+      "Contestability specifications are the views v_dimension_scores, v_index and v_effective, so nothing is " +
+      "stored twice. The database is built from the coding sheets by a script that stops if any score falls " +
+      "outside the three-point grid, if a de jure score is not the minimum of its three factors, or if a count " +
+      "is off. For example:"));
+    h.appendChild(rp);
+    h.appendChild(el("pre", "mono small", "select unit_id, period, de_jure, de_facto,\n" +
+      "       ec_multiplicative, ec_arithmetic, ec_bottleneck, implementation_gap\n" +
+      "from v_effective;"));
   })();
 
   /* ------------------------------------------------------------ boot */
   var h0 = location.hash.slice(1);
   if (h0 && $("#view-" + h0)) showTab(h0);
-})();
+};

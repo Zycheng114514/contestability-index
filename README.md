@@ -1,6 +1,6 @@
 # The Contestability Index — website
 
-Interactive site for the Contestability Index: fifteen pro-contestability obligation categories scored on the law as written across nine jurisdictions, and a de facto pilot for two European markets.
+Interactive site for the Contestability Index: sixteen pro-contestability obligation categories scored on the law as written across nine jurisdictions, and a de facto pilot for two European markets.
 
 **Status: preliminary.** Figures may change.
 

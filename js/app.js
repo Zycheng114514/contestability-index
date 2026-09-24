@@ -53,11 +53,11 @@
     D.meta.totalCells + " assessments · " + D.meta.extractCount +
     " verbatim legal extracts · data generated " + D.meta.generated;
 
-  var pending = D.meta.reviewCounts.needs_review || 0;
+  var pending = (D.meta.reviewCounts.needs_review || 0) + (D.meta.reviewCounts.coded || 0);
   if (pending > 0) {
     $("#ribbon").hidden = false;
     $("#ribbon-text").textContent = " Preliminary — " + pending + " of " + D.meta.totalCells +
-      " assessments are pending review; those scores may change.";
+      " assessments are pending review or not yet verified; those scores may change.";
   }
 
   $("#footer-note").textContent =
@@ -370,8 +370,7 @@
       var warn = el("div", "callout warn-callout");
       warn.appendChild(el("strong", null, "This jurisdiction differs from the published paper. "));
       warn.appendChild(document.createTextNode(
-        "The site shows the current master coding sheet; the paper reports " + disc.detail.join("; ") +
-        ". The paper's row was compiled from a database snapshot taken before these cells were corrected."));
+        "The site shows the current master coding sheet (" + disc.detail.join("; ") + "). " + disc.why));
       host.appendChild(warn);
     }
   }
@@ -1140,12 +1139,14 @@
     var disc = D.paper.discrepancies || [];
     if (disc.length) {
       var box = el("div", "callout warn-callout");
-      box.appendChild(el("strong", null, "De jure: " + disc.length + " jurisdiction differs. "));
+      box.appendChild(el("strong", null, "De jure: " + disc.length +
+        (disc.length === 1 ? " jurisdiction differs" : " jurisdictions differ") + " from the published table. "));
       box.appendChild(document.createTextNode(
-        "Every other jurisdiction on this site reproduces the published table exactly. " +
-        disc.map(function (d) { return d.name + " (" + d.detail.join("; ") + ")"; }).join(" ") +
-        ". The published row was compiled from a database snapshot taken before these cells were corrected, " +
-        "so the site is current and the paper is not."));
+        "The other jurisdictions reproduce it exactly. The paper's Table 3 covers fifteen obligation categories; " +
+        "this site covers sixteen."));
+      var dl = el("ul", "small");
+      disc.forEach(function (d) { dl.appendChild(el("li", null, d.name + " (" + d.detail.join("; ") + "). " + (d.whyShort || d.why))); });
+      box.appendChild(dl);
       if (D.paper.handbook && D.paper.handbook.note) {
         box.appendChild(el("div", "small", D.paper.handbook.note + " The handbook prints " +
           D.paper.handbook.ukIndex + "."));

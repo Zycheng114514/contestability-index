@@ -139,6 +139,20 @@
     var legalForms = rows(db, "select * from legal_forms order by form_code").map(function (r) {
       return { code: r.form_code, name: r.name, definition: r.definition_examples, signature: r.typical_signature };
     });
+    var formOfLabel = {};
+    rows(db, "select label, form_code from legal_form_map").forEach(function (r) { formOfLabel[r.label] = r.form_code; });
+    // The article each jurisdiction relies on for each obligation category (one row per pair that has a basis).
+    var legalBasis = {};
+    rows(db, "select * from mechanism_legal_basis order by jurisdiction, mechanism_id").forEach(function (r) {
+      (legalBasis[r.jurisdiction] = legalBasis[r.jurisdiction] || []).push({ mechanism: r.mechanism_id, basis: r.article_basis });
+    });
+    // Documents whose full text is in the database. The text itself is read on demand (some are 400 KB).
+    var documents = rows(db, "select d.doc_id, d.jurisdiction, d.file_stem, d.instrument_name, d.language, " +
+                             "d.original_path, length(t.content) as chars from legal_documents d " +
+                             "left join document_texts t using (doc_id) order by d.jurisdiction, d.doc_id").map(function (r) {
+      return { id: r.doc_id, jurisdiction: r.jurisdiction, stem: r.file_stem, name: r.instrument_name || "",
+               language: r.language || "", file: r.original_path || "", chars: r.chars || 0 };
+    });
     var coverage = rows(db, "select * from market_coverage order by market, jurisdiction").map(function (r) {
       return { market: r.market, jurisdiction: r.jurisdiction, instruments: r.binding_instruments,
                provisions: r.covered_provisions, regime: r.regime_type, firms: r.designated_or_bound_firms, notes: r.notes };
@@ -201,7 +215,8 @@
         extractCount: extractCount, lambda: Number(info.effective_arithmetic_lambda || 0.5), dbUrl: DB_URL.split("?")[0]
       },
       jurisdictions: jurisdictions, dimensions: dims, mechanisms: mechanisms, cells: cells, aggregates: aggregates,
-      legalForms: legalForms, instruments: instruments, periods: periods,
+      legalForms: legalForms, formOfLabel: formOfLabel, instruments: instruments, periods: periods,
+      legalBasis: legalBasis, documents: documents,
       deFacto: { units: units, items: items, index: marketIndex, generalSources: generalSources },
       effective: effective,
       markets: { coverage: coverage, deJure: marketDeJure, index: marketIndex },
@@ -223,6 +238,7 @@
     var db = new res[0].Database(new Uint8Array(res[1]));
     window.CI_DB = db;  // the open database, for anyone who wants to query it from the console
     window.CI_DATA = build(db, res[2]);
+    window.CI_DATA.meta.dbBytes = res[1].byteLength;
     if (status) status.hidden = true;
     window.CI_BOOT();
   }).catch(function (e) {

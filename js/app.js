@@ -1,9 +1,15 @@
-/* The Contestability Index — rendering and interaction.
-   Vanilla JS. Reads window.CI_DATA, which js/db.js builds from the project database, and window.CI_WORLD.
-   db.js calls window.CI_BOOT once the database is open. */
+/* The Contestability Index — rendering, routing and interaction.
+   Layout modelled on the WJP Rule of Law Index site. Vanilla JS. Reads window.CI_DATA, which js/db.js builds from
+   the project database, and window.CI_WORLD. db.js calls window.CI_BOOT once the database is open.
+   Pages (hash routes): #/ explore, #/jurisdictions, #/jurisdiction/<code>, #/cases, #/scoring, #/data,
+   #/legal[/<code>], #/about.
+   Text the team has not supplied is drafted here and starts with the marker [AI generated]; the figures inside those
+   drafts are computed from the database when the page opens, so they follow the data. */
 window.CI_BOOT = function () {
   "use strict";
   var D = window.CI_DATA, W = window.CI_WORLD;
+  var APPENDIX = "https://zycheng114514.github.io/contestability-appendix/";
+  var AI = "[AI generated]";
 
   /* ------------------------------------------------------------ helpers */
   function $(s, r) { return (r || document).querySelector(s); }
@@ -18,6 +24,15 @@ window.CI_BOOT = function () {
     for (var k in attrs) if (attrs[k] !== undefined && attrs[k] !== null) n.setAttribute(k, attrs[k]);
     return n;
   }
+  function stext(attrs, t) { var n = svg("text", attrs); n.textContent = t; return n; }
+  function add(parent) {
+    for (var i = 1; i < arguments.length; i++) {
+      var c = arguments[i];
+      if (c === null || c === undefined || c === false) continue;
+      parent.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+    }
+    return parent;
+  }
   // Rounded half up, as the Handbook and the paper print (0.475 -> 0.48); toFixed alone would give 0.47.
   function num(v, d) {
     if (v === null || v === undefined) return "—";
@@ -25,649 +40,765 @@ window.CI_BOOT = function () {
     return (s * Math.round(Math.abs(v) * k + 1e-9) / k).toFixed(p);
   }
   function glyph(v) { return v === 1 ? "1" : v === 0.5 ? "½" : v === 0 ? "0" : "—"; }
-  function tier(v) { return v === 1 ? "s100" : v === 0.5 ? "s50" : "s0"; }
   function pretty(s) {
     if (!s) return "";
-    return String(s).replace(/_/g, " ").replace(/\+/g, " + ")
-      .replace(/^./, function (c) { return c.toUpperCase(); });
+    return String(s).replace(/_/g, " ").replace(/\+/g, " + ").replace(/^./, function (c) { return c.toUpperCase(); });
   }
+  function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
   function domain(url) { try { return new URL(url).hostname.replace(/^www\./, ""); } catch (e) { return url; } }
   function extLink(url, text) {
-    var a = el("a", "ext", text || domain(url));
-    a.setAttribute("href", url);
-    a.setAttribute("target", "_blank");
-    a.setAttribute("rel", "noopener noreferrer");
+    var a = el("a", null, text || domain(url));
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
     return a;
   }
+  function link(href, text) { var a = el("a", null, text); a.href = href; return a; }
+  var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
+                "November", "December"];
+  function month(ym) {
+    if (!ym) return "";
+    var p = String(ym).split("-");
+    return p[1] ? MONTHS[+p[1] - 1] + " " + p[0] : p[0];
+  }
+  function day(ymd) {
+    var p = String(ymd || "").split("-");
+    return p.length === 3 ? (+p[2]) + " " + MONTHS[+p[1] - 1] + " " + p[0] : String(ymd || "");
+  }
+  function ordinal(n) { var s = ["th", "st", "nd", "rd"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+  var WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve",
+               "thirteen", "fourteen", "fifteen", "sixteen"];
+  function words(n) { return WORDS[n] || String(n); }
+  function listText(arr) {
+    if (arr.length < 2) return arr.join("");
+    return arr.slice(0, -1).join(", ") + " and " + arr[arr.length - 1];
+  }
+  // A paragraph drafted for the team to review. It opens with the [AI generated] marker; parts are strings or nodes.
+  function aiP(parts, cls) {
+    var p = el("p", cls);
+    p.appendChild(el("span", "ai-tag", AI));
+    p.appendChild(document.createTextNode(" "));
+    (Array.isArray(parts) ? parts : [parts]).forEach(function (x) { add(p, x); });
+    return p;
+  }
+  function go(hash) { if (location.hash === hash) render(); else location.hash = hash; }
+  function scrollToEl(node) { if (node) node.scrollIntoView({ behavior: "smooth", block: "start" }); }
 
+  /* ------------------------------------------------------------ the score scale
+     One hue, light to dark, built on KGI blue (#003da5). The WJP site's magenta-to-teal ramp was
+     [[0,"#d40276"],[0.103,"#d40276"],[0.2217,"#ea1813"],[0.3842,"#f19d4b"],[0.5,"#f6c600"],[0.6768,"#adc493"],
+      [0.7758,"#6a9e89"],[0.8865,"#125459"],[0.9699,"#003632"],[1,"#003632"]]; swapping it back is this one line. */
+  var STOPS = [[0, "#c9d8f3"], [0.25, "#93b0e8"], [0.5, "#5583d6"], [0.75, "#1f56bd"], [0.88, "#003da5"], [1, "#0c2a66"]];
+  var GRADIENT = "linear-gradient(90deg, " + STOPS.map(function (s) {
+    return s[1] + " " + (s[0] * 100).toFixed(2) + "%";
+  }).join(", ") + ")";
+  function rgbOf(hex) { var n = parseInt(hex.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+  function scoreRgb(v) {
+    v = Math.max(0, Math.min(1, v));
+    for (var i = 1; i < STOPS.length; i++) {
+      if (v <= STOPS[i][0]) {
+        var a = STOPS[i - 1], b = STOPS[i], t = b[0] === a[0] ? 0 : (v - a[0]) / (b[0] - a[0]);
+        var ca = rgbOf(a[1]), cb = rgbOf(b[1]);
+        return [0, 1, 2].map(function (k) { return Math.round(ca[k] + (cb[k] - ca[k]) * t); });
+      }
+    }
+    return rgbOf(STOPS[STOPS.length - 1][1]);
+  }
+  function scoreColor(v) {
+    if (v === null || v === undefined) return "#e8e8e8";
+    return "rgb(" + scoreRgb(v).join(",") + ")";
+  }
+  // Text on a score fill: white on the dark ends of the scale, near-black on the light middle (orange to sage).
+  function inkOn(v) {
+    if (v === null || v === undefined) return "#26262b";
+    var c = scoreRgb(v).map(function (x) {
+      x /= 255;
+      return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] > 0.18 ? "#1d1d22" : "#ffffff";
+  }
+  function paint(node, v) { node.style.background = scoreColor(v); node.style.color = inkOn(v); return node; }
+
+  /* ------------------------------------------------------------ lookups */
   var jurName = {}, jurByCode = {};
   D.jurisdictions.forEach(function (j) { jurName[j.code] = j.name; jurByCode[j.code] = j; });
+  var CODES = D.jurisdictions.map(function (j) { return j.code; });
   var mechById = {};
   D.mechanisms.forEach(function (m) { mechById[m.id] = m; });
   var dimById = {};
   D.dimensions.forEach(function (d) { dimById[d.id] = d; });
+  var DIMS = D.dimensions.map(function (d) { return d.id; });
+  var KEYS = ["overall"].concat(DIMS);
+  var DIM_SHORT = { D1: "Mobility & switching", D2: "Rival access", D3: "Neutrality", D4: "Data & interoperability" };
+  var unitById = {};
+  D.deFacto.units.forEach(function (u) { unitById[u.id] = u; });
+  var UNITS = D.deFacto.units.map(function (u) { return u.id; });
+  // Categorical slots in the validated default order; colour follows the entity, never its rank.
+  var SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"];
+  var UNIT_COLOR = {};
+  UNITS.forEach(function (u, i) { UNIT_COLOR[u] = SERIES[i]; });
+  var LAW = "#151515";  // De Jure marks in the law-against-market charts
+  var nM = D.mechanisms.length, nJ = CODES.length, nD = DIMS.length, nU = UNITS.length;
+  var DJ_DATE = month(D.meta.evidenceDate);
+  var DF_NOW = month((D.periods["de_facto|market|current"] || {}).observed);
+  var DF_BASE = month((D.periods["de_facto|market|baseline"] || {}).observed);
 
-  var ranked = D.jurisdictions.map(function (j) { return j.code; }).sort(function (a, b) {
-    return D.aggregates[b].overall - D.aggregates[a].overall;
-  });
+  function val(code, key) {
+    var a = D.aggregates[code];
+    if (!a) return null;
+    return key === "overall" ? a.overall : a.dims[key];
+  }
+  // A jurisdiction's name inside a sentence: "the European Union", "the United States", "Japan".
+  function theName(code) { return (/^(EU|US|UK)$/.test(code) ? "the " : "") + jurName[code]; }
+  function theNames(codes) { return listText(codes.map(theName)); }
+  function keyName(key) { return key === "overall" ? "Overall index" : key + " " + dimById[key].name; }
+  function keyShort(key) { return key === "overall" ? "Overall index" : key + " " + DIM_SHORT[key]; }
+  function rankedBy(key) {
+    return CODES.slice().sort(function (a, b) { return val(b, key) - val(a, key) || CODES.indexOf(a) - CODES.indexOf(b); });
+  }
+  // Competition ranking: equal scores share a rank (the EU and Germany are both first).
+  function rankOf(code, key) {
+    var v = val(code, key), r = 1;
+    CODES.forEach(function (c) { if (val(c, key) > v + 1e-9) r++; });
+    return r;
+  }
+  function avgOf(key) { return CODES.reduce(function (s, c) { return s + val(c, key); }, 0) / nJ; }
   function cellOf(pid, code) { return D.cells[pid + "|" + code]; }
-
-  /* ------------------------------------------------------------ header */
-  $("#metaline").textContent =
-    "De jure snapshot " + D.meta.evidenceDate + " · " + D.meta.mechanismCount +
-    " obligation categories × " + D.meta.jurisdictionCount + " jurisdictions = " +
-    D.meta.totalCells + " assessments · " + D.meta.extractCount +
-    " verbatim legal extracts · database built " + D.meta.built;
-
-  $("#ribbon").hidden = false;
-  $("#ribbon-text").textContent = " Preliminary — the figures on this site may still change.";
-
-  function dbLink(text) {
-    var a = el("a", null, text);
-    a.setAttribute("href", D.meta.dbUrl);
-    a.setAttribute("download", "contestability.db");
-    return a;
-  }
-  var footNote = $("#footer-note");
-  footNote.textContent = "Every figure on this site is computed in your browser from the project database, ";
-  footNote.appendChild(dbLink("contestability.db"));
-  footNote.appendChild(document.createTextNode(
-    " (SQLite), which you can download. Published figures shown for comparison are transcribed from the paper."));
-
-  /* ------------------------------------------------------------ tabs */
-  var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
-  function showTab(name) {
-    tabs.forEach(function (b) {
-      var on = b.dataset.tab === name;
-      b.setAttribute("aria-selected", on ? "true" : "false");
-      $("#view-" + b.dataset.tab).hidden = !on;
+  function counts(code) {
+    var n = { full: 0, part: 0, none: 0 };
+    D.mechanisms.forEach(function (m) {
+      var s = cellOf(m.id, code).score;
+      if (s === 1) n.full++; else if (s === 0.5) n.part++; else n.none++;
     });
-    if (location.hash.slice(1) !== name) history.replaceState(null, "", "#" + name);
-    window.scrollTo(0, 0);
+    return n;
   }
-  tabs.forEach(function (b) {
-    b.addEventListener("click", function () { showTab(b.dataset.tab); });
-  });
-  window.addEventListener("hashchange", function () {
-    var h = location.hash.slice(1);
-    if (h && $("#view-" + h)) showTab(h);
+  function mainForm(code) {
+    var c = {};
+    D.mechanisms.forEach(function (m) { var f = cellOf(m.id, code).legal_form || "none"; c[f] = (c[f] || 0) + 1; });
+    var best = Object.keys(c).sort(function (a, b) { return c[b] - c[a]; })[0];
+    return { label: best, n: c[best] };
+  }
+  function mIdx(layer, unit, period) { return D.markets.index[layer + "|" + unit + "|" + period] || null; }
+  function mVal(layer, unit, period, key) {
+    var x = mIdx(layer, unit, period);
+    if (!x) return null;
+    if (key === "overall") return x.index;
+    return x.dims[key] ? x.dims[key].score : null;
+  }
+  function effOf(unit, period) { return D.effective.filter(function (e) { return e.unit === unit && e.period === period; })[0]; }
+  function prevalence() {
+    return D.mechanisms.map(function (m) {
+      var p = { m: m, full: [], part: [], none: [] };
+      CODES.forEach(function (c) {
+        var s = cellOf(m.id, c).score;
+        (s === 1 ? p.full : s === 0.5 ? p.part : p.none).push(c);
+      });
+      return p;
+    });
+  }
+
+  /* ------------------------------------------------------------ header, footer, menu */
+  $("#download-db").href = D.meta.dbUrl;
+  (function footer() {
+    var f = $("#footer");
+    add(f, el("p", null, "The Contestability Index · preliminary preview."));
+    var p = el("p");
+    add(p, "Every figure on this site is computed in your browser from the project database, ",
+        link(D.meta.dbUrl, "contestability.db"), " (SQLite, built " + D.meta.built + "). Full scoring rules and every table: ",
+        extLink(APPENDIX, "Online Appendix"), ".");
+    f.appendChild(p);
+  })();
+  var menuBtn = $(".menu-btn"), links = $("#subnav-links");
+  menuBtn.addEventListener("click", function () {
+    var open = links.classList.toggle("open");
+    menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
   });
 
-  /* ------------------------------------------------------------ tooltip */
+  /* ------------------------------------------------------------ tooltip and hover card */
   var tt = $("#tooltip");
-  function ttShow(lines, x, y) {
+  function ttShow(content, x, y, card) {
     tt.textContent = "";
-    lines.forEach(function (l) { tt.appendChild(el("div", null, l)); });
+    tt.className = "tooltip" + (card ? " card" : "");
+    if (Array.isArray(content)) content.forEach(function (l) { tt.appendChild(el("div", null, l)); });
+    else tt.appendChild(content);
     tt.hidden = false;
     ttMove(x, y);
   }
   function ttMove(x, y) {
     var r = tt.getBoundingClientRect();
-    tt.style.left = Math.min(x + 14, window.innerWidth - r.width - 10) + "px";
-    tt.style.top = Math.max(8, y - r.height - 12) + "px";
+    var left = x + 16, top = y + 16;
+    if (left + r.width > window.innerWidth - 8) left = x - r.width - 16;
+    if (top + r.height > window.innerHeight - 8) top = y - r.height - 12;
+    tt.style.left = Math.max(8, left) + "px";
+    tt.style.top = Math.max(8, top) + "px";
   }
   function ttHide() { tt.hidden = true; }
   window.addEventListener("scroll", ttHide, { passive: true });
-  function withTip(node, linesFn) {
-    node.addEventListener("pointerenter", function (e) { ttShow(linesFn(), e.clientX, e.clientY); });
-    node.addEventListener("pointermove", function (e) { ttMove(e.clientX, e.clientY); });
+  function withTip(node, fn, card) {
+    node.addEventListener("pointerenter", function (e) { if (e.pointerType !== "touch") ttShow(fn(), e.clientX, e.clientY, card); });
+    node.addEventListener("pointermove", function (e) { if (!tt.hidden) ttMove(e.clientX, e.clientY); });
     node.addEventListener("pointerleave", ttHide);
-    node.addEventListener("focus", function () {
-      var r = node.getBoundingClientRect();
-      ttShow(linesFn(), r.left + r.width / 2, r.top);
-    });
+    node.addEventListener("focus", function () { var r = node.getBoundingClientRect(); ttShow(fn(), r.left + r.width / 2, r.bottom, card); });
     node.addEventListener("blur", ttHide);
   }
 
-  /* ========================================================== OVERVIEW */
+  // The dark card shown on the map and the ranking: the De Jure score, the rank, and the four dimensions, with
+  // the De Facto observations beside them where they exist (the three EU gatekeeper-market pairs).
+  function hoverCard(code, key, place) {
+    var a = D.aggregates[code], v = val(code, key);
+    var box = el("div");
+    var top = el("div", "tt-top"), left = el("div");
+    left.appendChild(el("div", "tt-name", jurName[code]));
+    if (place && place !== jurName[code]) left.appendChild(el("div", "small", place + ", EU member state"));
+    top.appendChild(left);
+    var sc = paint(el("div", "tt-score"), v);
+    sc.style.borderColor = "transparent";
+    sc.appendChild(el("b", null, num(v)));
+    sc.appendChild(el("i", null, key === "overall" ? "De Jure index" : key + " score"));
+    top.appendChild(sc);
+    box.appendChild(top);
 
-  /* -- the two layers side by side, and the paper's four ways of relating them (section 3.5) -- */
-  var unitById = {};
-  D.deFacto.units.forEach(function (u) { unitById[u.id] = u; });
-  function effOf(unit, period) {
-    return D.effective.filter(function (e) { return e.unit === unit && e.period === period; })[0];
+    var scale = el("div", "tt-scale");
+    scale.style.background = GRADIENT;
+    var mk = el("span", "mk");
+    mk.style.left = (v * 100) + "%";
+    mk.style.background = scoreColor(v);
+    add(scale, mk, el("span", "lo", "0.0"), el("span", "hi", "1.0"));
+    box.appendChild(scale);
+
+    var n = counts(code), rows = el("div", "tt-rows");
+    add(rows, el("span", null, key === "overall" ? "Rank" : "Rank on " + key), el("b", null, rankOf(code, key) + " / " + nJ),
+        el("span", null, "Categories required in full"), el("b", null, n.full + " of " + nM),
+        el("span", null, "Snapshot"), el("b", null, DJ_DATE));
+    box.appendChild(rows);
+
+    var hasDF = code === "EU";
+    box.appendChild(el("div", "tt-sub", hasDF ? "De Jure and De Facto by dimension" : "De Jure by dimension"));
+    var dims = el("div", "tt-dims");
+    DIMS.forEach(function (d) {
+      dims.appendChild(el("span", null, d + " " + DIM_SHORT[d]));
+      var trk = el("span", "tt-track"), bar = el("span", "dj");
+      bar.style.width = (a.dims[d] * 100) + "%";
+      trk.appendChild(bar);
+      // One dot per pair, each on its own line inside the track, so pairs with the same value stay visible.
+      if (hasDF) UNITS.forEach(function (u, ui) {
+        var x = mVal("de_facto", u, "current", d);
+        if (x === null) return;
+        var dot = el("span", "df");
+        dot.style.left = (x * 100) + "%";
+        dot.style.top = (ui * 6) + "px";
+        dot.style.background = UNIT_COLOR[u];
+        trk.appendChild(dot);
+      });
+      dims.appendChild(trk);
+      dims.appendChild(el("span", null, num(a.dims[d])));
+    });
+    box.appendChild(dims);
+    var key2 = el("div", "tt-key"), k = el("span");
+    add(k, el("i", "bar"), "De Jure, " + DJ_DATE);
+    key2.appendChild(k);
+    if (hasDF) UNITS.forEach(function (u) {
+      var kk = el("span"), i = el("i");
+      i.style.background = UNIT_COLOR[u];
+      add(kk, i, unitById[u].name);
+      key2.appendChild(kk);
+    });
+    box.appendChild(key2);
+    box.appendChild(el("div", "tt-foot", hasDF ? "Dots: De Facto, " + DF_NOW + ", one per gatekeeper–market pair."
+      : code === "DE" ? "De Facto is observed EU-wide: see the European Union."
+      : "De Facto is not measured for this jurisdiction."));
+    box.appendChild(el("div", "tt-foot", "Click for the full profile."));
+    return box;
   }
 
-  (function renderGap() {
-    var host = $("#gap");
-    var list = el("div", "gap-list");
-    D.deFacto.units.forEach(function (u) {
-      var e = effOf(u.id, "current");
-      if (!e) return;
-      var row = el("div", "gap-row");
-      var head = el("div", "gap-head");
-      head.appendChild(el("strong", null, u.name));
-      head.appendChild(el("span", "muted small", " · " + u.market));
-      row.appendChild(head);
+  /* ------------------------------------------------------------ shared components */
+  function scaleLegend(title) {
+    var g = el("div", "scale-legend");
+    g.appendChild(el("span", "t", title || "Pro-contestability obligations in law"));
+    g.appendChild(el("span", "end", "Weaker"));
+    var bar = el("span", "bar");
+    bar.style.background = GRADIENT;
+    g.appendChild(bar);
+    g.appendChild(el("span", "end", "Stronger"));
+    var ticks = el("span", "ticks");
+    ["0.00", "0.25", "0.50", "0.75", "1.00"].forEach(function (t) { ticks.appendChild(el("span", null, t)); });
+    g.appendChild(ticks);
+    return g;
+  }
 
-      [["De jure — what the law mandates", e.deJure, "dj"],
-       ["De facto — what was observed", e.deFacto, "df"]].forEach(function (p) {
-        var line = el("div", "gap-bar-line");
-        line.appendChild(el("span", "gap-label", p[0]));
-        var track = el("span", "gap-track");
-        var fill = el("span", "gap-fill " + p[2]);
-        fill.style.width = (p[1] * 100).toFixed(1) + "%";
-        track.appendChild(fill);
-        line.appendChild(track);
-        line.appendChild(el("span", "gap-val", num(p[1])));
-        row.appendChild(line);
-      });
+  // Which jurisdiction each map feature belongs to. The EU is its 27 members; Germany keeps its own national score.
+  var ID_JUR = {};
+  D.jurisdictions.forEach(function (j) {
+    (j.mapIds || []).forEach(function (id) { if (!ID_JUR[id] || j.code !== "EU") ID_JUR[id] = j.code; });
+  });
+  // Mini-map windows (Equal Earth coordinates of world.js), cut around each jurisdiction's main territory.
+  var MINI_VIEW = { EU: "396.6 -29.1 270.5 194.4", DE: "486.5 38.3 75.5 54.2", US: "26.5 -65.1 414.4 297.8",
+                    TR: "539.5 67.4 100.2 72.0", JP: "781.3 57.2 136.7 98.3", KR: "799.1 91.5 56.1 40.3",
+                    CN: "593.6 1.7 322.9 232.1", UK: "453.6 27.9 79.5 57.1", AU: "706.0 237.3 299.2 215.1" };
 
-      var foot = el("p", "gap-foot");
-      foot.appendChild(el("strong", null, "Implementation gap " + num(e.gap)));
-      foot.appendChild(document.createTextNode(
-        " · product " + num(e.multiplicative) + " · arithmetic mean " + num(e.arithmetic) +
-        " · binding layer " + num(e.bottleneck)));
-      row.appendChild(foot);
-      list.appendChild(row);
+  // A shape cut at the antimeridian (Fiji) carries a sub-path that runs across the whole map; drop such slivers.
+  var CLEAN = {};
+  function cleanPath(id) {
+    if (CLEAN[id]) return CLEAN[id];
+    var parts = W.countries[id].d.split("Z").filter(function (p) {
+      var xs = (p.match(/-?\d+(?:\.\d+)?(?=,)/g) || []).map(Number);
+      return xs.length && Math.max.apply(null, xs) - Math.min.apply(null, xs) < 500;
     });
-    host.appendChild(list);
+    return (CLEAN[id] = parts.map(function (p) { return p + "Z"; }).join(""));
+  }
 
-    host.appendChild(el("h3", "eff-title", "The four specifications, at both observation dates"));
-    var wrap = el("div", "table-scroll");
-    var t = el("table", "plain eff-table");
-    var hr = el("tr");
-    ["Gatekeeper–market", "Observed", "De jure", "De facto", "Product (5)",
-     "Arithmetic, λ = " + D.meta.lambda + " (6)", "Binding layer (7)", "Gap (8)"]
-      .forEach(function (x, i) { hr.appendChild(el("th", i > 1 ? "num" : null, x)); });
-    t.appendChild(hr);
-    D.effective.forEach(function (e) {
-      var tr = el("tr");
-      tr.appendChild(el("td", null, (unitById[e.unit] || {}).name || e.unit));
-      tr.appendChild(el("td", "small", e.period === "baseline" ? "December 2023"
-        : "June 2026 (de jure), July 2026 (de facto)"));
-      [e.deJure, e.deFacto, e.multiplicative, e.arithmetic, e.bottleneck, e.gap].forEach(function (v) {
-        tr.appendChild(el("td", "num", num(v)));
-      });
-      t.appendChild(tr);
-    });
-    wrap.appendChild(t);
-    host.appendChild(wrap);
-    var noBase = D.effective.filter(function (e) { return e.deJure === null; })
-      .map(function (e) { return (unitById[e.unit] || {}).name; });
-    host.appendChild(el("p", "small muted",
-      "Equation numbers are the paper's. The paper uses the product for contestability that is both formally " +
-      "supported and practically realised; the arithmetic mean treats the layers as partly substitutable; the " +
-      "binding layer takes the weaker of the two; the gap is descriptive and is not a composite." +
-      (noBase.length ? " " + noBase.join(", ") + " has no December 2023 de jure baseline, so its baseline row shows the de facto score only." : "")));
-  })();
-
-  /* ---------------------------- world map ---------------------------- */
-  (function renderMap() {
-    var host = $("#map");
-    if (!W || !W.countries) { host.appendChild(el("p", "muted", "Map data unavailable.")); return; }
-
-    var idToJur = {};
-    D.jurisdictions.forEach(function (j) {
-      (j.mapIds || []).forEach(function (id) {
-        // A country already claimed by a national regime keeps it; the bloc is recorded separately.
-        if (idToJur[id]) { idToJur[id + "_extra"] = j.code; } else { idToJur[id] = j.code; }
-      });
-    });
-    // Germany sits inside the EU: shade it with the EU, mark it as also having a national regime.
-    var dualIds = { "276": true };
-
-    var s = svg("svg", { viewBox: W.viewBox, class: "worldmap", role: "img",
-                         "aria-label": "World map showing which jurisdictions are assessed by the index" });
-    var defs = svg("defs");
-    var pat = svg("pattern", { id: "dual", width: 6, height: 6, patternUnits: "userSpaceOnUse",
-                               patternTransform: "rotate(45)" });
-    pat.appendChild(svg("rect", { width: 6, height: 6, fill: "var(--s100)" }));
-    pat.appendChild(svg("rect", { width: 2.2, height: 6, fill: "var(--surface)", opacity: 0.85 }));
-    defs.appendChild(pat);
-    s.appendChild(defs);
-
+  function drawWorld(opts) {
+    var s = svg("svg", { viewBox: opts.viewBox || W.viewBox, class: "worldmap", role: "img",
+                         "aria-label": opts.label || "World map of the De Jure index" });
+    if (opts.viewBox) s.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    var paths = {};
+    function key() { return opts.keyRef ? opts.keyRef() : (opts.key || "overall"); }
+    // Germany is part of the EU, so the EU's own map keeps it in focus.
+    function inFocus(code) { return code === opts.focus || (opts.focus === "EU" && code === "DE"); }
     Object.keys(W.countries).forEach(function (id) {
-      var c = W.countries[id];
-      var code = idToJur[id];
-      var isEUmember = code === "EU";
-      var p = svg("path", { d: c.d });
+      var c = W.countries[id], code = ID_JUR[id];
+      var p = svg("path", { d: cleanPath(id) });
       if (!code) {
         p.setAttribute("class", "c-none");
-        p.setAttribute("aria-hidden", "true");
         s.appendChild(p);
         return;
       }
-      var score = D.aggregates[code] ? D.aggregates[code].overall : null;
-      p.setAttribute("class", "c-jur " + scoreClass(score));
-      if (dualIds[id]) p.setAttribute("fill", "url(#dual)");
-      p.setAttribute("tabindex", "0");
-      p.setAttribute("role", "button");
-      var label = dualIds[id]
-        ? c.n + ": covered by the European Union regime and by its own national regime"
-        : (isEUmember ? c.n + ", European Union" : c.n);
-      p.setAttribute("aria-label", label + ", de jure index " + num(score));
-      withTip(p, function () {
-        var lines = [label, "De jure index " + num(score)];
-        if (dualIds[id]) lines.push("Germany scores " + num(D.aggregates.DE.overall) + " on its own regime");
-        lines.push("Click to open the record");
-        return lines;
-      });
-      p.addEventListener("click", function () { openJurisdiction(dualIds[id] ? "DE" : code); });
-      p.addEventListener("keydown", function (e) {
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openJurisdiction(dualIds[id] ? "DE" : code); }
-      });
+      p.setAttribute("class", "c-jur" + (opts.focus && !inFocus(code) ? " faded" : "") + (opts.focus && inFocus(code) ? " hot" : ""));
+      p.style.fill = scoreColor(val(code, key()));
+      (paths[code] = paths[code] || []).push(p);
+      if (opts.interactive) {
+        var place = code === "EU" ? c.n : jurName[code];
+        p.setAttribute("tabindex", "0");
+        p.setAttribute("role", "link");
+        p.setAttribute("aria-label", place + (code === "EU" ? ", European Union" : "") + ": De Jure " +
+          keyShort(key()).toLowerCase() + " " + num(val(code, key())) + ". Opens the profile.");
+        withTip(p, function () { return hoverCard(code, key(), place); }, true);
+        p.addEventListener("pointerenter", function () { hot(code, true); });
+        p.addEventListener("pointerleave", function () { hot(code, false); });
+        p.addEventListener("click", function () { go("#/jurisdiction/" + code); });
+        p.addEventListener("keydown", function (e) { if (e.key === "Enter") go("#/jurisdiction/" + code); });
+      }
       s.appendChild(p);
     });
-    host.appendChild(s);
-
-    var lg = $("#map-legend");
-    [["c-none", "Not assessed"], ["sc-low", "0 to 0.33"], ["sc-mid", "0.34 to 0.66"], ["sc-high", "0.67 to 1"]]
-      .forEach(function (p) {
-        var k = el("span", "key");
-        k.appendChild(el("span", "swatch " + p[0]));
-        k.appendChild(el("span", null, p[1]));
-        lg.appendChild(k);
+    function hot(code, on) {
+      if (opts.focus && inFocus(code)) return;
+      (paths[code] || []).forEach(function (p) { p.classList.toggle("hot", on); });
+    }
+    s.recolor = function () {
+      Object.keys(paths).forEach(function (code) {
+        paths[code].forEach(function (p) { p.style.fill = scoreColor(val(code, key())); });
       });
-    var k2 = el("span", "key");
-    var sw = el("span", "swatch swatch-dual");
-    k2.appendChild(sw);
-    k2.appendChild(el("span", null, "Also has a national regime"));
-    lg.appendChild(k2);
-
-    $("#map-note").textContent =
-      "Equal Earth projection, chosen because it preserves relative area: on a Mercator map the " +
-      "high-latitude jurisdictions would look far larger than they are, and area is doing the work here. " +
-      "The twenty-seven European Union member states carry the European Union score; Germany is hatched " +
-      "because it is covered both by that regime and by its own. Malta is absent from the boundary data at " +
-      "this resolution. Grey means not assessed, which is not a score of zero.";
-  })();
-
-  function scoreClass(v) {
-    if (v === null || v === undefined) return "c-none";
-    return v >= 0.67 ? "sc-high" : v >= 0.34 ? "sc-mid" : "sc-low";
+    };
+    return s;
   }
 
-  /* ---------------------------- ranking ------------------------------ */
-  (function renderRanking() {
-    var host = $("#ranking");
-    ranked.forEach(function (code) {
-      var a = D.aggregates[code];
-      var row = el("button", "bar-row");
+  function rankingList(key) {
+    var host = el("div", "rank-list");
+    rankedBy(key).forEach(function (code) {
+      var v = val(code, key);
+      var row = el("button", "rank-row");
       row.type = "button";
-      row.appendChild(el("span", "bar-name", jurName[code]));
-      var track = el("span", "bar-track");
-      var fill = el("span", "bar-fill");
-      fill.style.width = (a.overall * 100).toFixed(1) + "%";
-      track.appendChild(fill);
-      row.appendChild(track);
-      row.appendChild(el("span", "bar-val", num(a.overall)));
-      withTip(row, function () {
-        return [jurName[code], "Overall " + num(a.overall),
-                D.dimensions.map(function (d) { return d.id + " " + num(a.dims[d.id]); }).join("  ")];
-      });
-      row.addEventListener("click", function () { openJurisdiction(code); });
+      row.setAttribute("aria-label", jurName[code] + ", rank " + rankOf(code, key) + ", " + num(v) + ". Opens the profile.");
+      row.appendChild(el("span", "nm", jurName[code]));
+      row.appendChild(el("span", "rk", String(rankOf(code, key))));
+      var trk = el("span", "trk"), f = el("span", "fill"), w = "calc((100% - 44px) * " + v.toFixed(4) + ")";
+      f.style.width = w;
+      f.style.background = scoreColor(v);
+      var lab = el("span", "val", num(v));
+      lab.style.left = w;
+      add(trk, f, lab);
+      row.appendChild(trk);
+      withTip(row, function () { return hoverCard(code, key); }, true);
+      row.addEventListener("click", function () { go("#/jurisdiction/" + code); });
       host.appendChild(row);
     });
-  })();
-
-  /* ------------------------- dimension panels ------------------------ */
-  (function renderDimGrid() {
-    var host = $("#dimgrid");
-    D.dimensions.forEach(function (d) {
-      var p = el("div", "dim-panel");
-      p.appendChild(el("h3", null, d.id + " · " + d.name));
-      var q = (D.paper.dimensionQuestions || {})[d.id];
-      if (q) p.appendChild(el("p", "dim-q muted small", q.question));
-      ranked.forEach(function (code) {
-        var v = D.aggregates[code].dims[d.id];
-        var row = el("div", "mini-row");
-        row.appendChild(el("span", "mini-name", code));
-        var track = el("span", "mini-track");
-        var fill = el("span", "mini-fill");
-        fill.style.width = (v * 100).toFixed(1) + "%";
-        track.appendChild(fill);
-        row.appendChild(track);
-        row.appendChild(el("span", "mini-val", num(v)));
-        p.appendChild(row);
-      });
-      host.appendChild(p);
-    });
-  })();
-
-  /* ========================================================== DE JURE */
-
-  $("#dj-count").textContent = D.meta.totalCells;
-
-  var dimFilter = null, jurFilter = null;
-
-  (function renderFilters() {
-    var host = $("#filters");
-    var chips = el("div", "chips");
-    function chip(label, val) {
-      var b = el("button", "chip" + (val === dimFilter ? " on" : ""), label);
-      b.type = "button";
-      b.setAttribute("aria-pressed", val === dimFilter ? "true" : "false");
-      b.addEventListener("click", function () {
-        dimFilter = (dimFilter === val) ? null : val;
-        renderHeatmap();
-        Array.prototype.forEach.call(chips.children, function (c) {
-          var on = c.dataset.val === String(dimFilter);
-          c.classList.toggle("on", on);
-          c.setAttribute("aria-pressed", on ? "true" : "false");
-        });
-      });
-      b.dataset.val = String(val);
-      return b;
-    }
-    chips.appendChild(chip("All dimensions", null));
-    D.dimensions.forEach(function (d) { chips.appendChild(chip(d.id + " " + d.name, d.id)); });
-    host.appendChild(chips);
-
-    var sel = el("select", "jur-select");
-    sel.setAttribute("aria-label", "Highlight a jurisdiction");
-    sel.appendChild(new Option("All jurisdictions", ""));
-    ranked.forEach(function (c) { sel.appendChild(new Option(jurName[c], c)); });
-    sel.addEventListener("change", function () {
-      jurFilter = sel.value || null;
-      renderHeatmap();
-      renderProfile();
-    });
-    host.appendChild(sel);
-  })();
-
-  function renderProfile() {
-    var host = $("#profile");
-    host.textContent = "";
-    if (!jurFilter) { host.hidden = true; return; }
-    host.hidden = false;
-    var a = D.aggregates[jurFilter], j = jurByCode[jurFilter];
-    host.appendChild(el("h3", null, jurName[jurFilter]));
-    var stats = el("p", "profile-stats");
-    stats.appendChild(el("strong", null, "Overall " + num(a.overall)));
-    D.dimensions.forEach(function (d) {
-      stats.appendChild(el("span", "stat", d.id + " " + num(a.dims[d.id])));
-    });
-    host.appendChild(stats);
-
-    var counts = {};
-    D.mechanisms.forEach(function (m) {
-      var f = cellOf(m.id, jurFilter).legal_form;
-      if (f) counts[f] = (counts[f] || 0) + 1;
-    });
-    var mix = Object.keys(counts).sort(function (x, y) { return counts[y] - counts[x]; })
-      .map(function (f) { return pretty(f) + " ×" + counts[f]; }).join(" · ");
-    host.appendChild(el("p", "small muted", "Legal forms across the " + D.mechanisms.length + " categories: " + mix));
-
-    if (j.enforcementNote) host.appendChild(el("p", "small", j.enforcementNote));
-
-    var inst = D.instruments[jurFilter] || [];
-    if (inst.length) {
-      host.appendChild(el("h4", null, "Instruments on the record"));
-      var ul = el("ul", "inst-list");
-      inst.forEach(function (i) {
-        var li = el("li");
-        li.appendChild(el("strong", null, i.name));
-        if (i.citation) li.appendChild(el("span", "muted small", " · " + i.citation));
-        if (i.pipeline) li.appendChild(el("span", "badge warn-badge", "Not yet in force"));
-        if (i.url) { li.appendChild(document.createTextNode(" ")); li.appendChild(extLink(i.url, i.sourceLabel || domain(i.url))); }
-        if (i.status) li.appendChild(el("div", "small muted", i.status));
-        ul.appendChild(li);
-      });
-      host.appendChild(ul);
-    }
-
-    var disc = (D.paper.discrepancies || []).filter(function (d) { return d.code === jurFilter; })[0];
-    if (disc) {
-      var warn = el("div", "callout warn-callout");
-      warn.appendChild(el("strong", null, "This jurisdiction differs from the published paper. "));
-      warn.appendChild(document.createTextNode(
-        "The site shows the current master coding sheet (" + disc.detail.join("; ") + "). " + disc.why));
-      host.appendChild(warn);
-    }
+    return host;
   }
 
-  function openJurisdiction(code) {
-    showTab("dejure");
-    jurFilter = code;
-    var sel = $(".jur-select");
-    if (sel) sel.value = code;
-    renderHeatmap();
-    renderProfile();
-  }
-
-  var cellButtons = {};
-
-  function renderHeatmap() {
-    var host = $("#heatmap");
-    host.textContent = "";
+  var cellButtons = {}, matrixOrder = CODES, current = null;
+  function categoryMatrix(order) {
+    matrixOrder = order;
     cellButtons = {};
-
-    var table = el("table", "heat");
-    var thead = el("thead"), hr = el("tr");
+    var wrap = el("div", "heat-wrap"), t = el("table", "heat"), thead = el("thead"), hr = el("tr");
     hr.appendChild(el("th", "corner", "Obligation category"));
-    ranked.forEach(function (code) {
-      var th = el("th", "jur-head" + (jurFilter && jurFilter !== code ? " dim" : ""), code);
-      th.setAttribute("title", jurName[code]);
+    order.forEach(function (code) {
+      var th = el("th", "jur-head"), a = link("#/jurisdiction/" + code, code);
+      a.title = jurName[code];
+      th.appendChild(a);
       hr.appendChild(th);
     });
     thead.appendChild(hr);
-    table.appendChild(thead);
-
-    var tbody = el("tbody");
+    t.appendChild(thead);
+    var tb = el("tbody");
     D.dimensions.forEach(function (d) {
-      if (dimFilter && dimFilter !== d.id) return;
-      var sep = el("tr", "dim-sep");
-      var sc = el("td", null, d.id + " — " + d.name.toUpperCase());
-      sc.colSpan = ranked.length + 1;
-      sep.appendChild(sc);
-      tbody.appendChild(sep);
-
+      var sep = el("tr", "dim-sep"), td = el("td", null, d.id + " · " + d.name);
+      td.colSpan = order.length + 1;
+      sep.appendChild(td);
+      tb.appendChild(sep);
       D.mechanisms.filter(function (m) { return m.dimension === d.id; }).forEach(function (m) {
-        var tr = el("tr");
-        var name = el("th", "mech-name");
-        name.appendChild(el("span", "mech-num", m.id + "."));
-        name.appendChild(el("span", null, " " + m.name));
-        name.setAttribute("title", m.description || "");
-        tr.appendChild(name);
-
-        ranked.forEach(function (code) {
-          var c = cellOf(m.id, code);
-          var td = el("td", "cell-td" + (jurFilter && jurFilter !== code ? " dim" : ""));
-          var b = el("button", "cell " + tier(c.score), glyph(c.score));
+        var tr = el("tr"), th = el("th", "mech");
+        add(th, el("span", "n", m.id + "."), m.name);
+        th.title = m.description || "";
+        tr.appendChild(th);
+        order.forEach(function (code) {
+          var c = cellOf(m.id, code), td2 = el("td");
+          var b = paint(el("button", "cell", glyph(c.score)), c.score);
           b.type = "button";
-          b.setAttribute("aria-label",
-            m.name + ", " + jurName[code] + ", score " + c.score +
-            ", minimum of existence " + c.existence + ", scope " + c.scope +
-            ", enforceability " + c.enforceability);
-          if (c.pipeline) b.appendChild(el("span", "pip", ""));
-          if (c.extracts && c.extracts.length) b.classList.add("has-extract");
+          if (c.pipeline) b.appendChild(el("span", "pip"));
+          b.setAttribute("aria-label", m.name + ", " + jurName[code] + ", score " + c.score + ". Opens the detail.");
           withTip(b, function () {
-            var l = [m.name + " · " + jurName[code],
-                     "Score " + num(c.score) + "  =  min(E " + c.existence + ", S " + c.scope + ", Enf " + c.enforceability + ")"];
-            if (c.binding && c.binding.length < 3) l.push("Binding factor: " + c.binding.map(pretty).join(", "));
-            if (c.instrument_basis) l.push(c.instrument_basis);
-            if (c.extracts && c.extracts.length) l.push("Verbatim legal text available");
-            return l;
+            return [m.name + " · " + jurName[code],
+                    "Score " + num(c.score) + " = min(Existence " + c.existence + ", Scope " + c.scope + ", Enforceability " + c.enforceability + ")",
+                    c.instrument_basis || ""].filter(Boolean);
           });
           b.addEventListener("click", function () { openCell(m.id, code); });
           cellButtons[m.id + "|" + code] = b;
-          td.appendChild(b);
-          tr.appendChild(td);
+          td2.appendChild(b);
+          tr.appendChild(td2);
         });
-        tbody.appendChild(tr);
+        tb.appendChild(tr);
       });
     });
-    table.appendChild(tbody);
-    host.appendChild(table);
-
-    var lg = $("#legend");
-    lg.textContent = "";
-    [["s0", "0 — no operative obligation"], ["s50", "½ — partial"], ["s100", "1 — full"]]
-      .forEach(function (p) {
-        var k = el("span", "key");
-        k.appendChild(el("span", "swatch " + p[0]));
-        k.appendChild(el("span", null, p[1]));
-        lg.appendChild(k);
-      });
-    var k3 = el("span", "key");
-    k3.appendChild(el("span", "swatch pip-key"));
-    k3.appendChild(el("span", null, "Instrument announced but not yet in force (scores 0 until enacted)"));
-    lg.appendChild(k3);
-    var k4 = el("span", "key");
-    k4.appendChild(el("span", "swatch extract-key"));
-    k4.appendChild(el("span", null, "Verbatim legal text on file"));
-    lg.appendChild(k4);
+    t.appendChild(tb);
+    wrap.appendChild(t);
+    wrap.appendChild(scoreKey(true));
+    return wrap;
+  }
+  function scoreKey(withPipeline) {
+    var lg = el("div", "legend-row");
+    [[1, "1 · full"], [0.5, "½ · partial"], [0, "0 · no operative obligation"]].forEach(function (p) {
+      var k = el("span"), sw = el("span", "sw");
+      sw.style.background = scoreColor(p[0]);
+      add(k, sw, p[1]);
+      lg.appendChild(k);
+    });
+    if (withPipeline) lg.appendChild(el("span", null, "• in a cell: announced, not yet in force (scores 0)"));
+    return lg;
   }
 
-  /* --------------------------- detail panel -------------------------- */
-  var panel = $("#panel"), current = null;
+  function scoreBox(v, cls) { return paint(el("div", "scorebox" + (cls ? " " + cls : ""), num(v)), v); }
+
+  // A bar whose data end is rounded (4px) and whose baseline end is square.
+  function barPath(x, y, w, h, r) {
+    if (w <= 0) return null;
+    r = Math.min(r === undefined ? 4 : r, w, h / 2);
+    return svg("path", { d: "M" + x + "," + y + "h" + (w - r) + "a" + r + "," + r + " 0 0 1 " + r + "," + r +
+      "v" + (h - 2 * r) + "a" + r + "," + r + " 0 0 1 " + (-r) + "," + r + "h" + (-(w - r)) + "z" });
+  }
+  function seriesKey(items) {
+    var k = el("div", "series-key");
+    items.forEach(function (it) {
+      var s = el("span"), i = el("i", it.shape || "");
+      if (it.hollow) { i.style.border = "2px solid " + it.color; i.style.background = "#fff"; } else i.style.background = it.color;
+      add(s, i, it.label);
+      k.appendChild(s);
+    });
+    return k;
+  }
+  function tipRect(parent, x, y, w, h, fn) {
+    var r = svg("rect", { x: x, y: y, width: Math.max(w, 1), height: h, class: "hit" });
+    withTip(r, fn);
+    parent.appendChild(r);
+    return r;
+  }
+  function xGrid(s, x, y0, y1, labels) {
+    [0, 0.25, 0.5, 0.75, 1].forEach(function (g) {
+      s.appendChild(svg("line", { x1: x(g), x2: x(g), y1: y0, y2: y1, class: g === 0 ? "axis" : "grid" }));
+      if (labels) s.appendChild(stext({ x: x(g), y: y0 - 6, "text-anchor": "middle" }, g === 0 || g === 1 ? String(g) : g.toFixed(2)));
+    });
+  }
+
+  // WJP-style strip: the scale, a small triangle for every other jurisdiction, the focus marked and named,
+  // and the average of all nine.
+  var gradSeq = 0;
+  function strip(code, key) {
+    var w = 620, x0 = 40, x1 = 580, id = "grad" + (++gradSeq);
+    var s = svg("svg", { viewBox: "0 0 " + w + " 78", class: "strip", role: "img",
+                         "aria-label": jurName[code] + " " + num(val(code, key)) + " against the other jurisdictions; average " + num(avgOf(key)) });
+    var defs = svg("defs"), lg = svg("linearGradient", { id: id });
+    STOPS.forEach(function (st) { lg.appendChild(svg("stop", { offset: st[0], "stop-color": st[1] })); });
+    defs.appendChild(lg);
+    s.appendChild(defs);
+    function X(v) { return x0 + v * (x1 - x0); }
+    s.appendChild(svg("rect", { x: x0, y: 38, width: x1 - x0, height: 12, fill: "url(#" + id + ")" }));
+    s.appendChild(stext({ x: x0 - 6, y: 48, "text-anchor": "end" }, "0.0"));
+    s.appendChild(stext({ x: x1 + 6, y: 48 }, "1.0"));
+    CODES.forEach(function (c) {
+      if (c === code) return;
+      var x = X(val(c, key));
+      var tri = svg("path", { d: "M" + (x - 5) + ",26L" + (x + 5) + ",26L" + x + ",35Z", fill: "#a7a7ae" });
+      withTip(tri, function () { return [jurName[c] + " " + num(val(c, key))]; });
+      s.appendChild(tri);
+    });
+    var avg = avgOf(key), xa = X(avg);
+    s.appendChild(svg("line", { x1: xa, x2: xa, y1: 34, y2: 56, stroke: "#3a3a40", "stroke-width": 2 }));
+    s.appendChild(stext({ x: Math.min(Math.max(xa, 90), w - 90), y: 70, "text-anchor": "middle" }, "AVERAGE OF " + words(nJ).toUpperCase() + ": " + num(avg)));
+    var v = val(code, key), xf = X(v);
+    s.appendChild(svg("path", { d: "M" + (xf - 7) + ",22L" + (xf + 7) + ",22L" + xf + ",35Z", fill: "#111" }));
+    var anchor = xf < 120 ? "start" : xf > w - 120 ? "end" : "middle";
+    s.appendChild(stext({ x: xf, y: 16, "text-anchor": anchor, class: "focus" }, jurName[code].toUpperCase() + " " + num(v)));
+    return s;
+  }
+
+  // WJP-style ranking columns: every jurisdiction, lowest to highest, the focus marked.
+  function rankColumns(code, key) {
+    var w = 620, h = 210, x0 = 34, x1 = 610, yb = 170, yt = 30;
+    var s = svg("svg", { viewBox: "0 0 " + w + " " + h, class: "chart", role: "img",
+                         "aria-label": jurName[code] + " ranks " + rankOf(code, key) + " of " + nJ });
+    var order = rankedBy(key).reverse(), bw = (x1 - x0) / order.length;
+    function Y(v) { return yb - v * (yb - yt); }
+    [0, 0.5, 1].forEach(function (g) {
+      s.appendChild(svg("line", { x1: x0, x2: x1, y1: Y(g), y2: Y(g), class: g === 0 ? "axis" : "grid" }));
+      s.appendChild(stext({ x: x0 - 6, y: Y(g) + 4, "text-anchor": "end" }, g.toFixed(1)));
+    });
+    order.forEach(function (c, i) {
+      var v = val(c, key), cx = x0 + i * bw + bw / 2, cw = Math.min(24, bw - 8), hh = yb - Y(v);
+      if (hh > 0) {
+        var p = svg("path", { d: "M" + (cx - cw / 2) + "," + yb + "v" + (-(hh - 4)) + "a4,4 0 0 1 4,-4h" + (cw - 8) +
+          "a4,4 0 0 1 4,4v" + (hh - 4) + "z", fill: scoreColor(v) });
+        if (hh < 4) p = svg("rect", { x: cx - cw / 2, y: Y(v), width: cw, height: hh, fill: scoreColor(v) });
+        s.appendChild(p);
+      }
+      s.appendChild(stext({ x: cx, y: yb + 16, "text-anchor": "middle", class: c === code ? "ttl" : "" }, c));
+      tipRect(s, cx - bw / 2, yt - 10, bw, yb - yt + 10, function () { return [jurName[c] + ": " + num(v) + " (rank " + rankOf(c, key) + ")"]; });
+      if (c === code) {
+        s.appendChild(svg("path", { d: "M" + (cx - 7) + "," + (Y(v) - 18) + "h14l-7,10z", fill: "#111" }));
+        var anchor = i < 2 ? "start" : i > order.length - 3 ? "end" : "middle";
+        s.appendChild(stext({ x: cx, y: Y(v) - 24, "text-anchor": anchor, class: "ttl" },
+          jurName[code].toUpperCase() + ", " + rankOf(code, key) + " / " + nJ));
+      }
+    });
+    return s;
+  }
+
+  // Horizontal bars for one series: rows [{label, value, color, tip}]
+  function hbars(rows, opts) {
+    opts = opts || {};
+    var w = opts.width || 560, lw = opts.labelW || 150, rh = 26, top = 22, h = top + rows.length * rh + 6;
+    var s = svg("svg", { viewBox: "0 0 " + w + " " + h, class: "chart", role: "img", "aria-label": opts.label || "" });
+    function X(v) { return lw + v * (w - lw - 44); }
+    xGrid(s, X, top - 4, h - 6, true);
+    rows.forEach(function (r, i) {
+      var y = top + i * rh + 5;
+      s.appendChild(stext({ x: lw - 8, y: y + 12, "text-anchor": "end", class: "lab" }, r.label));
+      var b = barPath(X(0), y, X(r.value) - X(0), 16);
+      if (b) { b.setAttribute("fill", r.color || scoreColor(r.value)); s.appendChild(b); }
+      s.appendChild(stext({ x: X(r.value) + 5, y: y + 12, class: "val" }, num(r.value)));
+      if (r.tip) tipRect(s, 0, y - 4, w, rh, r.tip);
+    });
+    return s;
+  }
+
+  // Slope chart between the De Facto baseline and the latest observation, one line per gatekeeper-market pair.
+  function slopeChart(key) {
+    var w = 560, h = 250, xa = 150, xb = 410, yt = 26, yb = 210;
+    var s = svg("svg", { viewBox: "0 0 " + w + " " + h, class: "chart", role: "img",
+                         "aria-label": "De Facto " + keyShort(key).toLowerCase() + ", " + DF_BASE + " and " + DF_NOW });
+    function Y(v) { return yb - v * (yb - yt); }
+    [0, 0.25, 0.5, 0.75, 1].forEach(function (g) {
+      s.appendChild(svg("line", { x1: xa, x2: xb, y1: Y(g), y2: Y(g), class: g === 0 ? "axis" : "grid" }));
+      s.appendChild(stext({ x: xa - 44, y: Y(g) + 4, "text-anchor": "end" }, g.toFixed(2)));
+    });
+    s.appendChild(stext({ x: xa, y: h - 12, "text-anchor": "middle" }, DF_BASE));
+    s.appendChild(stext({ x: xb, y: h - 12, "text-anchor": "middle" }, DF_NOW));
+    var lines = UNITS.map(function (u) { return { u: u, a: mVal("de_facto", u, "baseline", key), b: mVal("de_facto", u, "current", key) }; })
+      .filter(function (l) { return l.a !== null && l.b !== null; });
+    lines.forEach(function (l) {
+      var col = UNIT_COLOR[l.u];
+      s.appendChild(svg("line", { x1: xa, y1: Y(l.a), x2: xb, y2: Y(l.b), stroke: col, "stroke-width": 2, "stroke-linecap": "round" }));
+      [[xa, l.a], [xb, l.b]].forEach(function (p) {
+        s.appendChild(svg("circle", { cx: p[0], cy: Y(p[1]), r: 5, fill: col, stroke: "#fff", "stroke-width": 2 }));
+      });
+      tipRect(s, xa - 10, Math.min(Y(l.a), Y(l.b)) - 8, xb - xa + 20, Math.abs(Y(l.a) - Y(l.b)) + 16, function () {
+        return [unitById[l.u].name, "De Facto " + keyShort(key).toLowerCase() + ": " + num(l.a) + " (" + DF_BASE + ") → " + num(l.b) + " (" + DF_NOW + ")"];
+      });
+    });
+    // End labels, highest value first, each pushed down until it clears the one above, so they keep the lines' order.
+    function labels(side) {
+      var placed = [];
+      lines.slice().sort(function (p, q) { return q[side] - p[side]; }).forEach(function (l) {
+        var y = Y(l[side]) + 4;
+        if (placed.length && y < placed[placed.length - 1] + 14) y = placed[placed.length - 1] + 14;
+        placed.push(y);
+        s.appendChild(side === "a"
+          ? stext({ x: xa - 10, y: y, "text-anchor": "end", class: "val" }, num(l.a))
+          : stext({ x: xb + 10, y: y, class: "val" }, num(l.b) + "  " + unitById[l.u].name));
+      });
+    }
+    labels("a");
+    labels("b");
+    return s;
+  }
+
+  // Stacked bars: how many jurisdictions score 1, 0.5 and 0 on each obligation category.
+  function prevalenceChart(sorted, compact) {
+    var rows = prevalence();
+    if (sorted) rows.sort(function (a, b) { return b.full.length - a.full.length || b.part.length - a.part.length || a.m.id - b.m.id; });
+    var w = compact ? 560 : 760, lw = compact ? 232 : 250, rh = compact ? 21 : 25, top = 8, h = top + rows.length * rh + 8;
+    var s = svg("svg", { viewBox: "0 0 " + w + " " + h, class: "chart", role: "img",
+                         "aria-label": "Number of jurisdictions scoring 1, one half and 0 on each obligation category" });
+    var span = w - lw - 10;
+    rows.forEach(function (r, i) {
+      var y = top + i * rh, x = lw;
+      s.appendChild(stext({ x: lw - 8, y: y + rh / 2 + 4, "text-anchor": "end", class: "lab" }, r.m.id + ". " + r.m.name));
+      [[r.full, 1, "required in full by"], [r.part, 0.5, "partly required by"], [r.none, 0, "not required by"]].forEach(function (seg) {
+        if (!seg[0].length) return;
+        var sw = span * seg[0].length / nJ;
+        var hgt = rh - 6;
+        s.appendChild(svg("rect", { x: x, y: y + 3, width: Math.max(sw - 2, 1), height: hgt, fill: scoreColor(seg[1]),
+                                    rx: 1 }));
+        if (sw >= 18) s.appendChild(stext({ x: x + (sw - 2) / 2, y: y + 3 + hgt / 2 + 4, "text-anchor": "middle",
+                                            fill: inkOn(seg[1]), style: "fill:" + inkOn(seg[1]) }, String(seg[0].length)));
+        tipRect(s, x, y + 3, sw - 2, hgt, function () {
+          return [r.m.name + ": " + seg[2] + " " + seg[0].length + " of " + nJ, seg[0].map(function (c) { return jurName[c]; }).join(", ")];
+        });
+        x += sw;
+      });
+    });
+    var wrap = el("div");
+    wrap.appendChild(seriesKey([{ label: "Required in full (1)", color: scoreColor(1), shape: "sq" },
+                                { label: "Partly (½)", color: scoreColor(0.5), shape: "sq" },
+                                { label: "No operative obligation (0)", color: scoreColor(0), shape: "sq" }]));
+    wrap.appendChild(s);
+    return wrap;
+  }
+
+  // De Jure (market level) and De Facto for one gatekeeper-market pair, December 2023 to the latest observation.
+  // Hollow mark = December 2023, filled = latest; squares = De Jure, circles = De Facto.
+  function lawMarketRows(units, keys) {
+    var w = 680, lw = 230, x0 = lw + 20, x1 = w - 50, rh = 22;
+    var groups = [];
+    units.forEach(function (u) { keys.forEach(function (k) { groups.push({ u: u, k: k }); }); });
+    var per = 2 * rh + 22, h = 30 + groups.length * per;
+    var s = svg("svg", { viewBox: "0 0 " + w + " " + h, class: "chart", role: "img",
+                         "aria-label": "De Jure and De Facto for the gatekeeper–market pairs, " + DF_BASE + " and latest" });
+    function X(v) { return x0 + v * (x1 - x0); }
+    xGrid(s, X, 22, h - 4, true);
+    groups.forEach(function (g, gi) {
+      var y = 30 + gi * per;
+      s.appendChild(stext({ x: 0, y: y + 10, class: "ttl" }, (units.length > 1 ? unitById[g.u].name + " · " : "") + keyShort(g.k)));
+      [["de_jure", "De Jure (market level)", LAW, "sq"], ["de_facto", "De Facto", UNIT_COLOR[g.u], "dot"]].forEach(function (L, li) {
+        var yy = y + 14 + li * rh + 10;
+        var a = mVal(L[0], g.u, "baseline", g.k), b = mVal(L[0], g.u, "current", g.k);
+        s.appendChild(stext({ x: 14, y: yy + 4 }, L[1] + (a === null && b !== null ? ", no " + DF_BASE + " record" : "")));
+        if (b === null) return;
+        if (a !== null && Math.abs(a - b) > 1e-9) {
+          s.appendChild(svg("line", { x1: X(a), x2: X(b), y1: yy, y2: yy, stroke: L[2], "stroke-width": 2 }));
+        }
+        function mark(v, filled) {
+          var m = L[3] === "sq"
+            ? svg("rect", { x: X(v) - 5, y: yy - 5, width: 10, height: 10, rx: 1 })
+            : svg("circle", { cx: X(v), cy: yy, r: 5 });
+          m.setAttribute("fill", filled ? L[2] : "#fff");
+          m.setAttribute("stroke", filled ? "#fff" : L[2]);
+          m.setAttribute("stroke-width", 2);
+          s.appendChild(m);
+        }
+        if (a !== null) mark(a, false);
+        mark(b, true);
+        var right = num(b) + (a !== null && a === b ? " (unchanged)" : "");
+        s.appendChild(stext({ x: X(b) + 10, y: yy + 4, class: "val" }, right));
+        if (a !== null && a !== b && X(b) - X(a) > 44) s.appendChild(stext({ x: X(a) - 9, y: yy + 4, "text-anchor": "end", class: "val" }, num(a)));
+        tipRect(s, 0, yy - rh / 2, w, rh, function () {
+          return [unitById[g.u].name + " · " + keyShort(g.k), L[1] + ": " + (a === null ? "no " + DF_BASE + " record" : num(a) + " (" + DF_BASE + ")") +
+                  " → " + num(b) + " (" + (L[0] === "de_jure" ? DJ_DATE : DF_NOW) + ")"];
+        });
+      });
+    });
+    var wrap = el("div");
+    var items = [{ label: "De Jure, market level", color: LAW, shape: "sq" }];
+    units.forEach(function (u) { items.push({ label: "De Facto, " + unitById[u].name, color: UNIT_COLOR[u] }); });
+    items.push({ label: DF_BASE + " (hollow)", color: "#85858c", hollow: true });
+    wrap.appendChild(seriesKey(items));
+    wrap.appendChild(s);
+    return wrap;
+  }
+
+  /* ------------------------------------------------------------ detail panel */
+  var panel = $("#panel");
+  function openPanel(build) {
+    ttHide();
+    panel.textContent = "";
+    var close = el("button", "close", "×");
+    close.type = "button";
+    close.setAttribute("aria-label", "Close the detail panel");
+    close.addEventListener("click", function () { closePanel(); });
+    panel.appendChild(close);
+    build(panel);
+    panel.hidden = false;
+    panel.scrollTop = 0;
+    requestAnimationFrame(function () { panel.classList.add("open"); });
+    close.focus();
+  }
+  function closePanel(silent) {
+    if (panel.hidden) return;
+    panel.classList.remove("open");
+    panel.hidden = true;
+    Object.keys(cellButtons).forEach(function (k) { cellButtons[k].classList.remove("active"); });
+    if (!silent && current && cellButtons[current.pid + "|" + current.code]) cellButtons[current.pid + "|" + current.code].focus();
+    current = null;
+  }
 
   function openCell(pid, code) {
     var m = mechById[pid], c = cellOf(pid, code);
     current = { pid: pid, code: code };
-    Object.keys(cellButtons).forEach(function (k) { cellButtons[k].classList.remove("active"); });
-    if (cellButtons[pid + "|" + code]) cellButtons[pid + "|" + code].classList.add("active");
-    ttHide();
-    panel.textContent = "";
-
-    var close = el("button", "close", "×");
-    close.type = "button";
-    close.setAttribute("aria-label", "Close detail panel");
-    close.addEventListener("click", closePanel);
-    panel.appendChild(close);
-
-    panel.appendChild(el("p", "crumb",
-      m.dimension + " — " + dimById[m.dimension].name +
-      " · category " + m.id + " of " + D.mechanisms.length));
-    panel.appendChild(el("h2", null, m.name));
-    if (m.description) panel.appendChild(el("p", "mech-desc muted", m.description));
-    if (m.code) panel.appendChild(el("p", "small muted",
-      "Observed in the de facto layer as indicator " + m.code + ", " + m.indicator + "."));
-    panel.appendChild(el("p", "jname", jurName[code]));
-
-    var fr = el("div", "factor-row");
-    [["Existence", c.existence, "existence"], ["Scope", c.scope, "scope"],
-     ["Enforceability", c.enforceability, "enforceability"]].forEach(function (f) {
-      // Marking all three as binding when they are equal says nothing; only mark a real constraint.
+    Object.keys(cellButtons).forEach(function (k) { cellButtons[k].classList.toggle("active", k === pid + "|" + code); });
+    openPanel(function (p) {
+      p.appendChild(el("p", "crumb", m.dimension + " " + dimById[m.dimension].name + " · category " + m.id + " of " + nM));
+      p.appendChild(el("h2", null, m.name + ": " + jurName[code]));
+      if (m.description) p.appendChild(el("p", "muted small", m.description));
+      var fr = el("div", "factor-row");
       var informative = c.binding && c.binding.length < 3;
-      var isBinding = informative && c.binding.indexOf(f[2]) !== -1;
-      var box = el("div", "factor " + tier(f[1]) + (isBinding ? " binding" : ""));
-      box.appendChild(el("span", "flabel", f[0]));
-      box.appendChild(el("span", "fval", glyph(f[1])));
-      if (isBinding) box.appendChild(el("span", "fbind", "binding"));
-      fr.appendChild(box);
-    });
-    panel.appendChild(fr);
-
-    var min = el("p", "formula-line");
-    min.textContent = "Category score = min(" + c.existence + ", " + c.scope + ", " + c.enforceability + ") = " + c.score;
-    panel.appendChild(min);
-    if (c.binding && c.binding.length < 3) {
-      panel.appendChild(el("p", "small",
-        "The binding constraint here is " + c.binding.map(pretty).join(" and ") +
-        ". Raising the other factors would not raise this score."));
-    }
-    panel.appendChild(el("p", "small muted",
-      "The minimum rule reflects the complementarity of the three factors: broad enforcement cannot " +
-      "substitute for a missing obligation, and a broadly written duty without credible enforcement " +
-      "provides little effective protection."));
-
-    if (c.factor_rationale) {
-      panel.appendChild(el("h4", null, "Why this score"));
-      panel.appendChild(el("p", null, c.factor_rationale));
-    }
-
-    panel.appendChild(el("h4", null, "Legal basis"));
-    if (c.legal_form) panel.appendChild(el("span", "badge", pretty(c.legal_form)));
-    if (c.instrument_basis) {
-      var ib = el("p");
-      ib.appendChild(el("strong", null, c.instrument_basis));
-      panel.appendChild(ib);
-    }
-    if (c.legal_basis_full && c.legal_basis_full !== c.instrument_basis) {
-      panel.appendChild(el("p", "sub small", c.legal_basis_full));
-    }
-    if (c.market_scope) panel.appendChild(el("p", "small", "Market scope: " + c.market_scope));
-
-    if (c.extracts && c.extracts.length) {
-      panel.appendChild(el("h4", null, "The legal text itself"));
-      c.extracts.forEach(function (x) {
-        var box = el("div", "extract");
-        box.appendChild(el("div", "extract-head", x.instrument));
-        if (x.summary) box.appendChild(el("div", "small muted", x.summary));
-        if (x.text) box.appendChild(el("blockquote", null, x.text));
-        if (x.translation) {
-          box.appendChild(el("div", "small muted", "English translation"));
-          box.appendChild(el("blockquote", "translation", x.translation));
-        }
-        if (x.sourcePath) box.appendChild(el("div", "small muted", "Source file: " + x.sourcePath));
-        panel.appendChild(box);
+      [["Existence", c.existence, "existence"], ["Scope", c.scope, "scope"], ["Enforceability", c.enforceability, "enforceability"]]
+        .forEach(function (f) {
+          var bind = informative && c.binding.indexOf(f[2]) !== -1;
+          var box = paint(el("div", "factor" + (bind ? " binding" : "")), f[1]);
+          add(box, el("span", "fl", f[0]), el("span", "fv", glyph(f[1])), bind ? el("span", "fb", "binding") : null);
+          fr.appendChild(box);
+        });
+      p.appendChild(fr);
+      p.appendChild(el("p", "formula", "score = min(" + c.existence + ", " + c.scope + ", " + c.enforceability + ") = " + c.score));
+      if (c.factor_rationale) { p.appendChild(el("h4", null, "Why this score")); p.appendChild(el("p", null, c.factor_rationale)); }
+      p.appendChild(el("h4", null, "Legal basis"));
+      if (c.legal_form) p.appendChild(el("span", "badge form", pretty(c.legal_form)));
+      if (c.instrument_basis) p.appendChild(add(el("p"), el("strong", null, c.instrument_basis)));
+      if (c.legal_basis_full && c.legal_basis_full !== c.instrument_basis) p.appendChild(el("p", "small", c.legal_basis_full));
+      if (c.market_scope) p.appendChild(el("p", "small", "Market scope: " + c.market_scope));
+      (c.extracts || []).forEach(function (x, i) {
+        if (!i) p.appendChild(el("h4", null, "The legal text"));
+        p.appendChild(el("p", "small", x.instrument + (x.summary ? ": " + x.summary : "")));
+        if (x.text) p.appendChild(el("blockquote", null, x.text));
+        if (x.translation) p.appendChild(el("blockquote", "translation", x.translation));
       });
-    }
-
-    var inst = (D.instruments[code] || []).filter(function (i) {
-      return c.instrument_basis && i.name &&
-        (c.instrument_basis.indexOf(i.name.split(" (")[0]) !== -1 ||
-         (c.legal_basis_full || "").indexOf(i.name.split(" (")[0]) !== -1);
-    });
-    if (inst.length) {
-      panel.appendChild(el("h4", null, "Official sources"));
-      var ul = el("ul", "inst-list");
-      inst.forEach(function (i) {
-        var li = el("li");
-        li.appendChild(el("strong", null, i.name));
-        if (i.url) { li.appendChild(document.createTextNode(" ")); li.appendChild(extLink(i.url, i.sourceLabel || domain(i.url))); }
-        ul.appendChild(li);
+      var inst = (D.instruments[code] || []).filter(function (i) {
+        var stem = (i.name || "").split(" (")[0];
+        return stem && ((c.instrument_basis || "").indexOf(stem) !== -1 || (c.legal_basis_full || "").indexOf(stem) !== -1);
       });
-      panel.appendChild(ul);
-    }
-
-    if (c.evidence_notes) {
-      panel.appendChild(el("h4", null, "Evidence notes"));
-      panel.appendChild(el("p", null, c.evidence_notes));
-    }
-    if (c.pipeline) {
-      panel.appendChild(el("h4", null, "Announced but not in force"));
-      panel.appendChild(el("div", "callout", c.pipeline +
-        " — instruments that have not entered into force score zero on Existence."));
-    }
-
-    if (c.evidence_date) panel.appendChild(el("p", "status-line", "Evidence as of " + c.evidence_date));
-
-    var hint = el("p", "navhint");
-    hint.append("Navigate: ");
-    hint.appendChild(el("kbd", null, "←"));
-    hint.append(" ");
-    hint.appendChild(el("kbd", null, "→"));
-    hint.append(" jurisdictions · ");
-    hint.appendChild(el("kbd", null, "↑"));
-    hint.append(" ");
-    hint.appendChild(el("kbd", null, "↓"));
-    hint.append(" categories · ");
-    hint.appendChild(el("kbd", null, "Esc"));
-    hint.append(" close");
-    panel.appendChild(hint);
-
-    panel.hidden = false;
-    requestAnimationFrame(function () { panel.classList.add("open"); });
-    close.focus();
+      if (inst.length) {
+        p.appendChild(el("h4", null, "Official sources"));
+        var ul = el("ul", "link-list");
+        inst.forEach(function (i) { ul.appendChild(add(el("li"), el("strong", null, i.name), " ", i.url ? extLink(i.url, i.sourceLabel || domain(i.url)) : null)); });
+        p.appendChild(ul);
+      }
+      if (c.evidence_notes) { p.appendChild(el("h4", null, "Evidence notes")); p.appendChild(el("p", "small", c.evidence_notes)); }
+      if (c.pipeline) { p.appendChild(el("h4", null, "Announced, not in force")); p.appendChild(el("p", "small", c.pipeline)); }
+      if (c.evidence_date) p.appendChild(el("p", "small muted", "Evidence as of " + c.evidence_date + "."));
+      p.appendChild(el("p", "small muted", "Keys: ← → jurisdictions · ↑ ↓ categories · Esc closes."));
+    });
   }
-
-  function closePanel() {
-    if (!panel.classList.contains("open")) return;
-    panel.classList.remove("open");
-    panel.hidden = true;
-    Object.keys(cellButtons).forEach(function (k) { cellButtons[k].classList.remove("active"); });
-    if (current && cellButtons[current.pid + "|" + current.code]) {
-      cellButtons[current.pid + "|" + current.code].focus();
-    }
-    current = null;
-  }
-
-  function step(dPid, dJur) {
+  function step(dP, dJ) {
     if (!current) return;
-    var visible = D.mechanisms.filter(function (m) { return !dimFilter || m.dimension === dimFilter; });
-    var pi = visible.findIndex(function (m) { return String(m.id) === String(current.pid); });
-    var ji = ranked.indexOf(current.code);
+    var pi = D.mechanisms.findIndex(function (m) { return m.id === current.pid; });
+    var ji = matrixOrder.indexOf(current.code);
     if (pi < 0 || ji < 0) return;
-    pi = Math.max(0, Math.min(visible.length - 1, pi + dPid));
-    ji = Math.max(0, Math.min(ranked.length - 1, ji + dJur));
-    openCell(visible[pi].id, ranked[ji]);
+    pi = Math.max(0, Math.min(nM - 1, pi + dP));
+    ji = Math.max(0, Math.min(matrixOrder.length - 1, ji + dJ));
+    openCell(D.mechanisms[pi].id, matrixOrder[ji]);
   }
   document.addEventListener("keydown", function (e) {
     if (panel.hidden) return;
     if (e.key === "Escape") { closePanel(); return; }
+    if (!current) return;
     if (e.key === "ArrowLeft") { e.preventDefault(); step(0, -1); }
     if (e.key === "ArrowRight") { e.preventDefault(); step(0, 1); }
     if (e.key === "ArrowUp") { e.preventDefault(); step(-1, 0); }
@@ -675,574 +806,1331 @@ window.CI_BOOT = function () {
   });
   document.addEventListener("click", function (e) {
     if (panel.hidden || panel.contains(e.target)) return;
-    if (e.target.closest && e.target.closest(".cell")) return;
-    closePanel();
+    if (e.target.closest && e.target.closest(".cell, .cat-row button, .open-doc")) return;
+    closePanel(true);
   });
 
-  renderHeatmap();
-
-  /* ========================================================== DE FACTO */
-
-  var DF = D.deFacto;
-  var dfDim = "D1";
-  var LINE = {};
-  DF.units.forEach(function (u, i) { LINE[u.id] = "line-" + i; });
-  function dfIdx(u, p) { return DF.index["de_facto|" + u + "|" + p]; }
-
-  $("#df-note").textContent =
-    "Three gatekeeper–market pairs in the European Union (" +
-    DF.units.map(function (u) { return u.name; }).join(", ") +
-    "), each coded on the same sixteen indicators, one for each contestability mechanism, at two points in time: " +
-    "a December 2023 baseline, before the principal Digital Markets Act obligations applied, and a July 2026 " +
-    "observation. An indicator whose mechanism does not operate in the market is Not Applicable and is left out; " +
-    "one that applies but lacks the evidence to score it is Missing and is left out of the denominator. The " +
-    "comparison is descriptive. It does not identify a causal effect of the regulation.";
-
-  (function paperCompare() {
-    var host = $("#view-defacto");
-    var cmp = D.paper.deFactoCompare || [];
-    var differ = cmp.filter(function (c) { return !c.same; });
-    var box = el("div", "callout" + (differ.length ? " warn-callout" : ""));
-    box.appendChild(el("strong", null, differ.length
-      ? "Compared with the paper's Table 4, " + differ.length + " of " + cmp.length + " observations differ. "
-      : "These figures reproduce the paper's Table 4. "));
-    box.appendChild(document.createTextNode(
-      "The paper and this database use the same sixteen indicators and the same denominator rule; the database " +
-      "holds the current coding, and the paper's table reflects an earlier state of it."));
-    var ul = el("ul", "small");
-    cmp.forEach(function (c) {
-      ul.appendChild(el("li", c.same ? "muted" : null,
-        c.name + " — paper: " + c.paper.scored + " of " + c.paper.applicable + " applicable indicators scored, " +
-        num(c.paper.baseline) + " → " + num(c.paper.later) + "; this database: " + c.ours.scored + " of " +
-        c.ours.applicable + ", " + num(c.ours.pre) + " → " + num(c.ours.post) + (c.same ? " (identical)" : "")));
+  function openDoc(doc) {
+    current = null;
+    openPanel(function (p) {
+      p.appendChild(el("p", "crumb", jurName[doc.jurisdiction] + " · full text"));
+      p.appendChild(el("h2", null, doc.name || doc.stem));
+      p.appendChild(el("p", "small muted", [doc.language, doc.file, Math.round(doc.chars / 1000) + "k characters"].filter(Boolean).join(" · ")));
+      var r = window.CI_DB.exec("select content from document_texts where doc_id = " + Number(doc.id));
+      var text = r.length && r[0].values.length ? r[0].values[0][0] : "";
+      p.appendChild(el("div", "reader", text || "No text on file."));
     });
-    box.appendChild(ul);
-    host.insertBefore(box, host.children[2]);
-  })();
+  }
 
-  (function renderTiles() {
-    var host = $("#df-tiles");
-    var grid = el("div", "tile-grid");
-    DF.units.forEach(function (u) {
-      var pre = dfIdx(u.id, "baseline"), post = dfIdx(u.id, "current");
-      var t = el("div", "tile");
-      t.appendChild(el("div", "tile-label", u.name));
-      t.appendChild(el("div", "tile-sub muted small", u.gatekeeper + " · " + u.market));
-      t.appendChild(el("div", "tile-value", num(post.index)));
-      var delta = post.index - pre.index;
-      var d = el("div", "tile-delta " + (delta > 0 ? "up" : "flat"));
-      d.textContent = (delta > 0 ? "▲ +" : "") + num(delta) + " vs " + num(pre.index) + " at the baseline";
-      t.appendChild(d);
-      t.appendChild(el("div", "small muted", post.nScored + " of " + post.nApplicable +
-        " applicable indicators scored (" + post.nItems + " in the set)"));
-      grid.appendChild(t);
+  /* ------------------------------------------------------------ tables and CSV */
+  function csvDownload(name, header, rows) {
+    function q(v) {
+      if (v === null || v === undefined) return "";
+      var s = String(v);
+      return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }
+    var text = "﻿" + [header].concat(rows).map(function (r) { return r.map(q).join(","); }).join("\r\n");
+    var url = URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" }));
+    var a = el("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+  }
+  // cols: [{label, get(row), fmt(value,row) -> string|node, score: bool, num: bool}]
+  function dataTable(cols, rows) {
+    var wrap = el("div", "table-scroll"), t = el("table", "plain dtable"), thead = el("thead"), hr = el("tr"), tbody = el("tbody");
+    var sortCol = -1, dir = 1;
+    cols.forEach(function (c, i) {
+      var th = el("th", c.num || c.score ? "num" : null), b = el("button", null, c.label);
+      b.type = "button";
+      b.addEventListener("click", function () {
+        if (sortCol === i) dir = -dir; else { sortCol = i; dir = c.num || c.score ? -1 : 1; }
+        draw();
+      });
+      th.appendChild(b);
+      hr.appendChild(th);
     });
-    host.appendChild(grid);
-  })();
+    thead.appendChild(hr);
+    add(t, thead, tbody);
+    wrap.appendChild(t);
+    function draw() {
+      var list = rows.slice();
+      if (sortCol >= 0) {
+        var g = cols[sortCol].get;
+        list.sort(function (a, b) {
+          var x = g(a), y = g(b);
+          if (x === y) return 0;
+          if (x === null || x === undefined) return 1;
+          if (y === null || y === undefined) return -1;
+          return (x > y ? 1 : -1) * dir;
+        });
+      }
+      Array.prototype.forEach.call(hr.children, function (th, i) {
+        th.setAttribute("aria-sort", i === sortCol ? (dir > 0 ? "ascending" : "descending") : "none");
+        th.firstChild.dataset.dir = i === sortCol ? (dir > 0 ? "asc" : "desc") : "";
+      });
+      tbody.textContent = "";
+      list.forEach(function (r) {
+        var tr = el("tr");
+        cols.forEach(function (c) {
+          var v = c.get(r), td = el("td", c.score ? "sc" : c.num ? "num" : null);
+          if (c.score && v !== null && v !== undefined) { paint(td, v); td.textContent = c.fmt ? c.fmt(v, r) : num(v); }
+          else {
+            var f = c.fmt ? c.fmt(v, r) : (v === null || v === undefined || v === "" ? "—" : String(v));
+            if (typeof f === "string") td.textContent = f; else td.appendChild(f);
+          }
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    }
+    draw();
+    return wrap;
+  }
+  function csvButton(label, fn) {
+    var b = el("button", "btn btn-outline", label);
+    b.type = "button";
+    b.addEventListener("click", fn);
+    return b;
+  }
 
-  (function renderSlopes() {
-    var host = $("#slopes");
-    var legend = el("div", "slope-legend");
-    DF.units.forEach(function (u) {
-      var k = el("span", "key");
-      k.appendChild(el("span", "swatch " + LINE[u.id]));
-      k.appendChild(el("span", null, u.name));
-      legend.appendChild(k);
+  /* ------------------------------------------------------------ page scaffolding */
+  function section(cls, id) { var s = el("section", "section" + (cls ? " " + cls : "")); if (id) s.id = id; return s; }
+  function head(host, kicker, title, intro) {
+    if (kicker) host.appendChild(el("p", "sec-kicker", kicker));
+    host.appendChild(el("h2", "sec-head", title));
+    if (intro) host.appendChild(intro.nodeType ? intro : el("p", "sec-intro", intro));
+  }
+  function ctrlBar(left) {
+    var bar = el("div", "ctrlbar"), inn = el("div", "wrap ctrlbar-in"), l = el("div", "ctrl-left");
+    left.forEach(function (n) { l.appendChild(n); });
+    add(inn, l, scaleLegend());
+    bar.appendChild(inn);
+    return bar;
+  }
+  function jurSelect(selected, placeholder) {
+    var sel = el("select", "pselect");
+    sel.setAttribute("aria-label", placeholder || "Jurisdiction");
+    if (placeholder) sel.appendChild(new Option(placeholder, ""));
+    rankedBy("overall").forEach(function (c) { sel.appendChild(new Option(jurName[c], c, false, c === selected)); });
+    sel.addEventListener("change", function () { if (sel.value) go("#/jurisdiction/" + sel.value); });
+    return sel;
+  }
+
+  /* ========================================================== EXPLORE (first page) */
+  function pageExplore(app) {
+    var state = { key: "overall", pane: "rank" };
+
+    /* 1. Brief */
+    var hero = el("section", "hero"), hm = el("div", "hero-map");
+    hm.setAttribute("aria-hidden", "true");
+    hm.appendChild(drawWorld({ key: "overall" }));
+    hero.appendChild(hm);
+    var hin = el("div", "hero-in");
+    hin.appendChild(add(el("h1"), "How far do the laws require digital markets to be open to rivals, and how far are the markets ",
+                        el("em", null, "actually open?")));
+    hin.appendChild(el("p", "lede", "What is the difference between countries? We answer these questions in two layers: what the law " +
+      "requires (De Jure) and what we observe in the market (De Facto)."));
+    hin.appendChild(aiP("The De Jure layer scores " + words(nM) + " pro-contestability obligation categories, grouped into " +
+      words(nD) + " dimensions, in the law of " + words(nJ) + " jurisdictions as of " + DJ_DATE + ". The De Facto layer scores the same " +
+      words(nM) + " mechanisms as observed in " + words(nU) + " European Union gatekeeper–market pairs, in " + DF_BASE + " and " + DF_NOW + ".", "brief"));
+    var stats = el("div", "hero-stats");
+    [[nJ, "Jurisdictions"], [nM, "Obligation categories"], [nD, "Dimensions"], [nU, "EU gatekeeper–market pairs"]].forEach(function (x) {
+      stats.appendChild(add(el("div", "hero-stat"), el("b", null, String(x[0])), el("span", null, x[1])));
     });
-    host.appendChild(legend);
+    hin.appendChild(stats);
+    var cta = el("button", "btn btn-fill", "Explore the data");
+    cta.type = "button";
+    hin.appendChild(cta);
+    hero.appendChild(hin);
+    app.appendChild(hero);
 
-    D.dimensions.forEach(function (d) {
-      var box = el("div", "slope");
-      box.appendChild(el("h3", null, d.id + " · " + d.name));
-      var w = 300, h = 190, pad = { t: 16, r: 54, b: 26, l: 40 };
-      var s = svg("svg", { viewBox: "0 0 " + w + " " + h, class: "slope-svg", role: "img" });
-      var x0 = pad.l, x1 = w - pad.r, y0 = h - pad.b, y1 = pad.t;
+    /* 2-4. Map, hover card and plot zone in the same place */
+    var ex = el("section");
+    ex.id = "explore";
+    cta.addEventListener("click", function () { scrollToEl(ex); });
+    var seg = el("div", "seg"), bMap = el("button", null, "Map"), bPlot = el("button", null, "Plot zone");
+    seg.setAttribute("role", "group");
+    seg.setAttribute("aria-label", "View");
+    [bMap, bPlot].forEach(function (b) { b.type = "button"; seg.appendChild(b); });
+    ex.appendChild(ctrlBar([seg, jurSelect(null, "Go to a jurisdiction")]));
+
+    var stage = el("div", "map-stage"), mapTitle = el("div", "map-title");
+    var world = drawWorld({ interactive: true, keyRef: function () { return state.key; } });
+    add(stage, mapTitle, world, el("div", "map-hint", "Hover over a jurisdiction for its scores · click to open its profile"));
+    var noteRow = el("p", "map-note small muted");
+    var sw = el("span", "sw");
+    sw.style.cssText = "display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px;background:#e8e8e8";
+    add(noteRow, sw, "Not assessed. Germany carries its own score; the other 26 EU member states carry the EU score.");
+    var mapView = add(el("div"), stage, noteRow);
+    var plotView = el("div");
+    plotView.hidden = true;
+    var plotBuilt = false;
+    add(ex, mapView, plotView);
+    function setView(v) {
+      bMap.setAttribute("aria-pressed", v === "map" ? "true" : "false");
+      bPlot.setAttribute("aria-pressed", v === "plot" ? "true" : "false");
+      mapView.hidden = v !== "map";
+      plotView.hidden = v !== "plot";
+      if (v === "plot" && !plotBuilt) { plotZone(plotView); plotBuilt = true; }
+    }
+    bMap.addEventListener("click", function () { setView("map"); });
+    bPlot.addEventListener("click", function () { setView("plot"); });
+    setView("map");
+
+    var grid = el("div", "explore-grid"), list = el("div", "dimlist"), pane = el("div", "rankpane");
+    var dimButtons = {};
+    function dimButton(k, label, q) {
+      var b = el("button", null, label);
+      b.type = "button";
+      if (q) b.appendChild(el("span", "q", q));
+      b.addEventListener("click", function () { setKey(k); });
+      dimButtons[k] = b;
+      return b;
+    }
+    list.appendChild(dimButton("overall", "Overall index score"));
+    list.appendChild(el("div", "lab", "Explore by dimension"));
+    DIMS.forEach(function (d, i) {
+      var q = (D.paper.dimensionQuestions || {})[d];
+      list.appendChild(dimButton(d, (i + 1) + " | " + dimById[d].name, q ? q.question : ""));
+    });
+    var tabs = el("div", "tabs-row"), tRank = el("button", null, "Ranking"), tMatrix = el("button", null, "All " + D.meta.totalCells + " scores");
+    [tRank, tMatrix].forEach(function (b) { b.type = "button"; b.setAttribute("role", "tab"); tabs.appendChild(b); });
+    tabs.setAttribute("role", "tablist");
+    var paneTitle = el("h3", "pane-title"), paneBody = el("div");
+    add(pane, tabs, paneTitle, paneBody);
+    tRank.addEventListener("click", function () { state.pane = "rank"; drawPane(); });
+    tMatrix.addEventListener("click", function () { state.pane = "matrix"; drawPane(); });
+    add(grid, list, pane);
+    mapView.appendChild(grid);
+    app.appendChild(ex);
+
+    function drawPane() {
+      tRank.setAttribute("aria-selected", state.pane === "rank" ? "true" : "false");
+      tMatrix.setAttribute("aria-selected", state.pane === "matrix" ? "true" : "false");
+      paneBody.textContent = "";
+      if (state.pane === "rank") {
+        paneTitle.textContent = "Jurisdictions ranked by " + (state.key === "overall" ? "the De Jure index" : state.key + " " + dimById[state.key].name) + ", " + DJ_DATE;
+        paneBody.appendChild(rankingList(state.key));
+      } else {
+        paneTitle.textContent = "Every De Jure score: " + nM + " categories × " + nJ + " jurisdictions (click a cell for the legal basis)";
+        paneBody.appendChild(categoryMatrix(rankedBy(state.key)));
+      }
+    }
+    function setKey(k) {
+      state.key = k;
+      world.recolor();
+      Object.keys(dimButtons).forEach(function (x) { dimButtons[x].setAttribute("aria-pressed", x === k ? "true" : "false"); });
+      mapTitle.textContent = "De Jure, " + DJ_DATE + " · " + (k === "overall" ? "overall index" : k + " " + dimById[k].name);
+      drawPane();
+    }
+    setKey("overall");
+
+    /* 5. Notes right after the map */
+    var notes = section("alt", "notes"), nin = el("div", "wrap");
+    head(nin, "Before you compare", "Five things to know when reading the map");
+    var grid2 = el("div", "notes-grid");
+    [
+      ["The law as written, not compliance",
+       "A De Jure score records whether the law requires an obligation, how widely it applies and whether it can be enforced. " +
+       "It does not record whether firms comply or whether the market has changed; that is the De Facto layer."],
+      ["Grey is not zero",
+       words(nJ).charAt(0).toUpperCase() + words(nJ).slice(1) + " jurisdictions are assessed. Grey areas have not been assessed, which is different " +
+       "from a score of zero. The 27 EU member states share the EU score; Germany also has its own national regime and its own score."],
+      ["Scores move in steps of one half",
+       "Each obligation category is scored 0, 0.5 or 1 on Existence, Scope and Enforceability, and takes the lowest of the three. " +
+       "A dimension is the mean of its categories, and the index is the mean of the " + words(nD) + " dimensions."],
+      ["De Facto covers three EU pairs",
+       "The De Facto layer is measured for " + listText(UNITS.map(function (u) { return unitById[u].name; })) + " in the European Union. " +
+       "The other jurisdictions have De Jure scores only, so the map shows the law everywhere and the market only in the EU card."],
+      ["Before and after, not cause and effect",
+       "The De Facto observations compare " + DF_BASE + ", before the Digital Markets Act's obligations applied in March 2024, with " +
+       DF_NOW + ". A change between the two dates happened after the Act applied; the index does not show that the Act caused it."]
+    ].forEach(function (n) {
+      var c = el("div", "note");
+      c.appendChild(el("h3", null, n[0]));
+      c.appendChild(aiP(n[1]));
+      grid2.appendChild(c);
+    });
+    nin.appendChild(grid2);
+    notes.appendChild(nin);
+    app.appendChild(notes);
+
+    /* 6. Key points */
+    var kps = section(null, "key-points"), kin = el("div", "wrap");
+    head(kin, "Key points", "Answers to the questions people ask first",
+      aiP("The answers below are drafts. Every number in them is read from the project database when this page opens.", "sec-intro"));
+    var kl = el("div", "kp-list");
+    keyPoints().forEach(function (k, i) {
+      var c = el("div", "kp"), t = el("div");
+      t.appendChild(el("p", "qn", "Question " + (i + 1)));
+      t.appendChild(el("h3", null, k.q));
+      if (k.big) {
+        var big = el("div", "big");
+        k.big.forEach(function (b) { big.appendChild(add(el("div"), el("b", null, b[0]), el("span", null, b[1]))); });
+        t.appendChild(big);
+      }
+      k.text.forEach(function (p) { t.appendChild(aiP(p)); });
+      if (k.more) {
+        var mo = link(k.more[0] === "explore" ? "#/" : k.more[0], k.more[1] + " →");
+        if (k.more[0] === "explore") mo.addEventListener("click", function (e) { e.preventDefault(); scrollToEl(ex); });
+        t.appendChild(add(el("p", "small"), mo));
+      }
+      var v = el("div", "viz");
+      v.appendChild(k.viz());
+      add(c, t, v);
+      kl.appendChild(c);
+    });
+    kin.appendChild(kl);
+    kps.appendChild(kin);
+    app.appendChild(kps);
+
+    /* where to go next */
+    var nx = section("alt"), xin = el("div", "wrap");
+    head(xin, "Go further", "Read the details");
+    var cards = el("div", "link-cards");
+    [["#/jurisdictions", "Jurisdiction profiles", "Every category score, with the law behind it, for each of the " + words(nJ) + " jurisdictions."],
+     ["#/cases", "Case studies", "Three cases told with the data: an app store, one law in three markets, and Japan."],
+     ["#/scoring", "Scoring rules", "How a legal text becomes a 0, ½ or 1, and how the scores add up."],
+     ["#/data", "Data", "Every table on one page, sortable and downloadable."],
+     ["#/legal", "Legal documents", "The instruments, the articles relied on and the verbatim provisions."]].forEach(function (x) {
+      var a = link(x[0], "");
+      a.className = "link-card";
+      add(a, el("b", null, x[1]), el("span", null, x[2]));
+      cards.appendChild(a);
+    });
+    xin.appendChild(cards);
+    nx.appendChild(xin);
+    app.appendChild(nx);
+  }
+
+  function keyPoints() {
+    var out = [];
+    var rk = rankedBy("overall"), topV = val(rk[0], "overall");
+    var tops = rk.filter(function (c) { return val(c, "overall") === topV; });
+    var rest = rk.filter(function (c) { return tops.indexOf(c) < 0; });
+    var below = rk.filter(function (c) { return val(c, "overall") < 0.5; });
+    var last = rk[rk.length - 1];
+    var pending = D.mechanisms.filter(function (m) { var c = cellOf(m.id, last); return c.legal_form === "pending" && c.score === 0; }).length;
+    out.push({
+      q: "Which jurisdictions require the most?",
+      big: [[num(topV), listText(tops.map(function (c) { return jurName[c]; }))], [num(val(rest[0], "overall")), jurName[rest[0]]],
+            [num(val(last, "overall")), jurName[last]]],
+      text: [cap(theNames(tops)) + (tops.length > 1 ? " score " : " scores ") + num(topV) +
+             (topV === 1 ? ": the law requires all " + words(nM) + " obligation categories in full. " : ". ") +
+             cap(theName(rest[0])) + " follows at " + num(val(rest[0], "overall")) + ". " + cap(words(below.length)) +
+             " jurisdictions score below 0.50, and " + theName(last) + " scores lowest at " + num(val(last, "overall")) +
+             (pending ? "; " + words(pending) + " of its " + words(nM) + " categories are covered only by announced reforms that are not yet in force, which score zero." : ".")],
+      more: ["#/jurisdictions", "Open the jurisdiction profiles"],
+      viz: function () { return rankingList("overall"); }
+    });
+
+    var ch = UNITS.map(function (u) { return { u: u, a: mVal("de_facto", u, "baseline", "overall"), b: mVal("de_facto", u, "current", "overall") }; })
+      .filter(function (x) { return x.a !== null && x.b !== null; });
+    var up = ch.slice().sort(function (x, y) { return (y.b - y.a) - (x.b - x.a); });
+    out.push({
+      q: "Did the three EU markets open up after the Digital Markets Act?",
+      big: ch.map(function (x) { return [num(x.a) + " → " + num(x.b), unitById[x.u].name]; }),
+      text: [(ch.every(function (x) { return x.b > x.a; }) ? "All " + words(ch.length) + " pairs scored higher in " + DF_NOW + " than in " + DF_BASE + ". " : "") +
+             unitById[up[0].u].name + " rose the most, from " + num(up[0].a) + " to " + num(up[0].b) + ". These are observations from before " +
+             "and after the Act's obligations began to apply in March 2024; they are not estimates of the Act's effect."],
+      more: ["#/cases", "Read the case studies"],
+      viz: function () {
+        var w = el("div");
+        w.appendChild(seriesKey(UNITS.map(function (u) { return { label: unitById[u].name, color: UNIT_COLOR[u] }; })));
+        w.appendChild(slopeChart("overall"));
+        return w;
+      }
+    });
+
+    var eff = UNITS.map(function (u) { return effOf(u, "current"); }).filter(Boolean);
+    var gaps = eff.map(function (e) { return e.gap; }), dfs = eff.map(function (e) { return e.deFacto; });
+    var allFull = eff.every(function (e) { return e.deJure === 1; });
+    out.push({
+      q: "How far behind the law are the markets?",
+      big: eff.map(function (e) { return [num(e.gap), "gap, " + unitById[e.unit].name]; }),
+      text: [(allFull ? "In " + DJ_DATE + " EU law requires all " + words(nM) + " obligations in each of the three markets: the market-level De Jure score is " +
+               num(1) + " for every pair. " : "") +
+             "The " + DF_NOW + " De Facto scores run from " + num(Math.min.apply(null, dfs)) + " to " + num(Math.max.apply(null, dfs)) +
+             ", so the implementation gap, De Jure minus De Facto, is between " + num(Math.min.apply(null, gaps)) + " and " + num(Math.max.apply(null, gaps)) + "."],
+      more: ["#/jurisdiction/EU", "See the European Union profile"],
+      viz: function () {
+        var rows = [];
+        eff.forEach(function (e) {
+          rows.push({ label: unitById[e.unit].name + ", De Jure", value: e.deJure, color: LAW,
+                      tip: function () { return [unitById[e.unit].name, "De Jure, market level, " + DJ_DATE + ": " + num(e.deJure)]; } });
+          rows.push({ label: "De Facto", value: e.deFacto, color: UNIT_COLOR[e.unit],
+                      tip: function () { return [unitById[e.unit].name, "De Facto, " + DF_NOW + ": " + num(e.deFacto), "Gap: " + num(e.gap)]; } });
+        });
+        return hbars(rows, { labelW: 200, label: "De Jure and De Facto for each pair" });
+      }
+    });
+
+    var pv = prevalence();
+    var maxF = Math.max.apply(null, pv.map(function (p) { return p.full.length; }));
+    var minF = Math.min.apply(null, pv.map(function (p) { return p.full.length; }));
+    var most = pv.filter(function (p) { return p.full.length === maxF; }), least = pv.filter(function (p) { return p.full.length === minF; });
+    var onlyEU = least.every(function (p) { return p.full.slice().sort().join() === "DE,EU"; });
+    function names(ps) { return listText(ps.map(function (p) { return p.m.name.toLowerCase(); })); }
+    out.push({
+      q: "Which obligations are most and least common?",
+      big: [[maxF + " of " + nJ, "most common"], [minF + " of " + nJ, "least common"]],
+      text: [(most.length > 1 ? cap(words(most.length)) + " categories are" : "One category is") + " required in full by " + words(maxF) + " of the " + words(nJ) +
+             " jurisdictions, the most of any: " + names(most) + ". " + (least.length > 1 ? cap(words(least.length)) + " categories are" : "One category is") +
+             " required in full by " + words(minF) + (onlyEU ? ", the European Union and Germany, whose scores rest on the same EU law" : "") + ": " + names(least) + "."],
+      more: ["#/data", "Open the category table"],
+      viz: function () { return prevalenceChart(true, true); }
+    });
+
+    var sp = DIMS.map(function (d) {
+      var vs = CODES.map(function (c) { return val(c, d); }), mean = vs.reduce(function (a, b) { return a + b; }, 0) / vs.length;
+      var sd = Math.sqrt(vs.reduce(function (a, b) { return a + (b - mean) * (b - mean); }, 0) / vs.length);
+      var mn = Math.min.apply(null, vs), mx = Math.max.apply(null, vs);
+      return { d: d, sd: sd, min: mn, max: mx,
+               lo: CODES.filter(function (c) { return val(c, d) === mn; }), hi: CODES.filter(function (c) { return val(c, d) === mx; }) };
+    });
+    var bySd = sp.slice().sort(function (a, b) { return b.sd - a.sd; }), hiS = bySd[0], loS = bySd[bySd.length - 1];
+    function who(cs) { var n = cs.map(theName); return n.length > 3 ? n.slice(0, 2).join(", ") + " and " + (n.length - 2) + " others" : listText(n); }
+    out.push({
+      q: "Where do the jurisdictions differ most?",
+      big: [[num(hiS.sd), "spread on " + hiS.d], [num(loS.sd), "spread on " + loS.d]],
+      text: ["The jurisdictions differ most on " + hiS.d + " " + dimById[hiS.d].name + ", where scores run from " + num(hiS.min) + " (" + who(hiS.lo) +
+             ") to " + num(hiS.max) + " (" + who(hiS.hi) + "). They differ least on " + loS.d + " " + dimById[loS.d].name + ", from " + num(loS.min) +
+             " to " + num(loS.max) + ". Spread is the standard deviation of the " + words(nJ) + " scores."],
+      more: ["explore", "Use the dimension list under the map"],
+      viz: function () { return dimSpread(); }
+    });
+    return out;
+  }
+
+  // One row per dimension, a dot for every jurisdiction; the lowest and highest are named.
+  function dimSpread() {
+    var w = 560, lw = 170, x0 = lw + 10, x1 = w - 20, rh = 46, top = 22, h = top + DIMS.length * rh + 4;
+    var s = svg("svg", { viewBox: "0 0 " + w + " " + h, class: "chart", role: "img", "aria-label": "Scores of every jurisdiction on each dimension" });
+    function X(v) { return x0 + v * (x1 - x0); }
+    xGrid(s, X, top - 4, h - 4, true);
+    DIMS.forEach(function (d, i) {
+      var y = top + i * rh + rh / 2;
+      s.appendChild(stext({ x: lw - 4, y: y + 4, "text-anchor": "end", class: "lab" }, d + " " + DIM_SHORT[d]));
+      s.appendChild(svg("line", { x1: x0, x2: x1, y1: y, y2: y, class: "grid" }));
+      var groups = {};
+      CODES.forEach(function (c) { var k = num(val(c, d)); (groups[k] = groups[k] || []).push(c); });
+      Object.keys(groups).forEach(function (k) {
+        var v = +k, cs = groups[k];
+        s.appendChild(svg("circle", { cx: X(v), cy: y, r: 6, fill: scoreColor(v), stroke: "#fff", "stroke-width": 2 }));
+        var hit = svg("circle", { cx: X(v), cy: y, r: 13, class: "hit" });
+        withTip(hit, function () { return [d + " " + num(v), cs.map(function (c) { return jurName[c]; }).join(", ")]; });
+        s.appendChild(hit);
+      });
+      var vs = CODES.map(function (c) { return val(c, d); }), mn = Math.min.apply(null, vs), mx = Math.max.apply(null, vs);
+      s.appendChild(stext({ x: X(mn), y: y + 20, "text-anchor": X(mn) < x0 + 30 ? "start" : "middle", class: "val" }, groups[num(mn)].join(", ")));
+      s.appendChild(stext({ x: X(mx), y: y - 11, "text-anchor": X(mx) > x1 - 30 ? "end" : "middle", class: "val" }, groups[num(mx)].join(", ")));
+    });
+    return s;
+  }
+
+  /* ---------------------------------------------------------- plot zone (same place as the map) */
+  var PZ = { preset: "compare", sel: null, x: "D1", y: "D4", lm: "overall", eff: "current", sorted: true };
+  function plotZone(host) {
+    var PRESETS = [
+      ["compare", "Compare jurisdictions", pzCompare],
+      ["scatter", "Dimension against dimension", pzScatter],
+      ["lawmarket", "Law against market (EU pairs)", pzLawMarket],
+      ["effective", "Effective Contestability", pzEffective],
+      ["prevalence", "How common is each obligation?", pzPrevalence]
+    ];
+    var wrap = el("div", "plotzone"), side = el("div", "pz-side"), main = el("div", "pz-main");
+    side.appendChild(el("h3", null, "Presets"));
+    var pl = el("div", "pz-presets"), btns = {};
+    PRESETS.forEach(function (p) {
+      var b = el("button", null, p[1]);
+      b.type = "button";
+      b.addEventListener("click", function () { show(p[0]); });
+      btns[p[0]] = b;
+      pl.appendChild(b);
+    });
+    side.appendChild(pl);
+    side.appendChild(el("h3", null, "Options"));
+    var opts = el("div", "pz-opts");
+    side.appendChild(opts);
+    add(wrap, side, main);
+    host.appendChild(wrap);
+    function show(id) {
+      PZ.preset = id;
+      Object.keys(btns).forEach(function (k) { btns[k].setAttribute("aria-pressed", k === id ? "true" : "false"); });
+      opts.textContent = "";
+      main.textContent = "";
+      PRESETS.filter(function (p) { return p[0] === id; })[0][2](main, opts);
+    }
+    show(PZ.preset);
+  }
+  function selectBox(label, options, value, onChange) {
+    var l = el("label", null, label), s = el("select");
+    options.forEach(function (o) { s.appendChild(new Option(o[1], o[0], false, o[0] === value)); });
+    s.addEventListener("change", function () { onChange(s.value); });
+    l.appendChild(s);
+    return l;
+  }
+  var KEY_OPTS = KEYS.map(function (k) { return [k, keyShort(k)]; });
+
+  function pzCompare(main, opts) {
+    if (!PZ.sel) PZ.sel = [["EU", 0], ["JP", 1], ["CN", 2], ["US", 3]];
+    opts.appendChild(el("label", null, "Jurisdictions (up to four)"));
+    var checks = el("div", "pz-checks"), boxes = {};
+    rankedBy("overall").forEach(function (c) {
+      var l = el("label"), cb = el("input");
+      cb.type = "checkbox";
+      cb.checked = PZ.sel.some(function (x) { return x[0] === c; });
+      cb.addEventListener("change", function () {
+        if (cb.checked) {
+          var used = PZ.sel.map(function (x) { return x[1]; }), slot = [0, 1, 2, 3].filter(function (k) { return used.indexOf(k) < 0; })[0];
+          PZ.sel.push([c, slot]);
+        } else PZ.sel = PZ.sel.filter(function (x) { return x[0] !== c; });
+        sync();
+        draw();
+      });
+      boxes[c] = cb;
+      add(l, cb, jurName[c]);
+      checks.appendChild(l);
+    });
+    opts.appendChild(checks);
+    function sync() { Object.keys(boxes).forEach(function (c) { boxes[c].disabled = !boxes[c].checked && PZ.sel.length >= 4; }); }
+    sync();
+    function draw() {
+      main.textContent = "";
+      main.appendChild(el("h3", null, "Compare jurisdictions across the four dimensions"));
+      main.appendChild(el("p", "pz-sub", "De Jure scores, " + DJ_DATE + ". One bar per jurisdiction; colours stay with the jurisdiction while you change the selection."));
+      var sel = PZ.sel.slice().sort(function (a, b) { return a[1] - b[1]; });
+      if (!sel.length) { main.appendChild(el("p", "muted", "Pick at least one jurisdiction.")); return; }
+      main.appendChild(seriesKey(sel.map(function (x) { return { label: jurName[x[0]], color: SERIES[x[1]], shape: "sq" }; })));
+      var w = 760, lw = 190, bh = 14, gap = 2, gpad = 18, top = 22;
+      var gh = sel.length * (bh + gap) - gap, h = top + KEYS.length * (gh + gpad) + 4;
+      var s = svg("svg", { viewBox: "0 0 " + w + " " + h, class: "chart", role: "img", "aria-label": "Grouped bars by dimension" });
+      function X(v) { return lw + v * (w - lw - 50); }
+      xGrid(s, X, top - 4, h - 4, true);
+      KEYS.forEach(function (k, gi) {
+        var y0 = top + gi * (gh + gpad) + gpad / 2;
+        s.appendChild(stext({ x: lw - 10, y: y0 + gh / 2 + 4, "text-anchor": "end", class: "lab" }, keyShort(k)));
+        sel.forEach(function (x, i) {
+          var v = val(x[0], k), y = y0 + i * (bh + gap);
+          var b = barPath(X(0), y, X(v) - X(0), bh);
+          if (b) { b.setAttribute("fill", SERIES[x[1]]); s.appendChild(b); }
+          s.appendChild(stext({ x: X(v) + 5, y: y + bh - 3, class: "val" }, num(v)));
+          tipRect(s, X(0), y, w - X(0), bh, function () { return [jurName[x[0]], keyName(k) + ": " + num(v)]; });
+        });
+      });
+      main.appendChild(s);
+    }
+    draw();
+  }
+
+  function pzScatter(main, opts) {
+    opts.appendChild(selectBox("Horizontal axis", KEY_OPTS, PZ.x, function (v) { PZ.x = v; draw(); }));
+    opts.appendChild(selectBox("Vertical axis", KEY_OPTS, PZ.y, function (v) { PZ.y = v; draw(); }));
+    function draw() {
+      main.textContent = "";
+      main.appendChild(el("h3", null, keyShort(PZ.y) + " against " + keyShort(PZ.x)));
+      main.appendChild(el("p", "pz-sub", "De Jure, " + DJ_DATE + ". One dot per jurisdiction; on the diagonal the two scores are equal."));
+      var w = 560, h = 470, x0 = 70, x1 = 520, y0 = 410, y1 = 20;
+      var s = svg("svg", { viewBox: "0 0 " + w + " " + h, class: "chart", role: "img", "aria-label": keyShort(PZ.y) + " against " + keyShort(PZ.x) });
+      function X(v) { return x0 + v * (x1 - x0); }
       function Y(v) { return y0 - v * (y0 - y1); }
       [0, 0.25, 0.5, 0.75, 1].forEach(function (g) {
-        s.appendChild(svg("line", { x1: x0, x2: x1, y1: Y(g), y2: Y(g), class: "gridline" }));
-        var t = svg("text", { x: x0 - 6, y: Y(g) + 4, class: "axis-lab", "text-anchor": "end" });
-        t.textContent = g;
-        s.appendChild(t);
+        s.appendChild(svg("line", { x1: X(g), x2: X(g), y1: y0, y2: y1, class: g === 0 ? "axis" : "grid" }));
+        s.appendChild(svg("line", { x1: x0, x2: x1, y1: Y(g), y2: Y(g), class: g === 0 ? "axis" : "grid" }));
+        s.appendChild(stext({ x: X(g), y: y0 + 18, "text-anchor": "middle" }, g.toFixed(2)));
+        s.appendChild(stext({ x: x0 - 8, y: Y(g) + 4, "text-anchor": "end" }, g.toFixed(2)));
       });
-      [[x0, "Pre-DMA"], [x1, "Post-DMA"]].forEach(function (p) {
-        var t = svg("text", { x: p[0], y: h - 8, class: "axis-lab", "text-anchor": "middle" });
-        t.textContent = p[1];
-        s.appendChild(t);
+      s.appendChild(svg("line", { x1: X(0), y1: Y(0), x2: X(1), y2: Y(1), class: "ref" }));
+      s.appendChild(stext({ x: (x0 + x1) / 2, y: h - 16, "text-anchor": "middle", class: "ttl" }, keyName(PZ.x)));
+      s.appendChild(stext({ x: 16, y: (y0 + y1) / 2, "text-anchor": "middle", class: "ttl",
+                            transform: "rotate(-90 16 " + ((y0 + y1) / 2) + ")" }, keyName(PZ.y)));
+      var groups = {};
+      CODES.forEach(function (c) { var k = num(val(c, PZ.x)) + "|" + num(val(c, PZ.y)); (groups[k] = groups[k] || []).push(c); });
+      var placed = [];
+      function free(bx) { return !placed.some(function (p) { return bx.x < p.x + p.w && bx.x + bx.w > p.x && bx.y < p.y + p.h && bx.y + bx.h > p.y; }); }
+      Object.keys(groups).forEach(function (k) {
+        var cs = groups[k], vx = val(cs[0], PZ.x), vy = val(cs[0], PZ.y), cx = X(vx), cy = Y(vy);
+        s.appendChild(svg("circle", { cx: cx, cy: cy, r: 7, fill: LAW, stroke: "#fff", "stroke-width": 2 }));
+        var hit = svg("circle", { cx: cx, cy: cy, r: 15, class: "hit" });
+        withTip(hit, function () { return cs.map(function (c) { return jurName[c]; }).concat([PZ.x + " " + num(vx) + " · " + PZ.y + " " + num(vy)]); });
+        s.appendChild(hit);
+        var t = cs.join(", "), tw = t.length * 7.4 + 4;
+        var cand = [{ x: cx + 11, y: cy - 8, a: "start" }, { x: cx - 11 - tw, y: cy - 8, a: "end" }, { x: cx - tw / 2, y: cy - 28, a: "middle" },
+                    { x: cx - tw / 2, y: cy + 12, a: "middle" }, { x: cx + 11, y: cy + 6, a: "start" }, { x: cx - 11 - tw, y: cy + 6, a: "end" }];
+        var pick = cand.filter(function (c) { return free({ x: c.x, y: c.y, w: tw, h: 16 }) && c.x > 0 && c.x + tw < w; })[0] || cand[0];
+        placed.push({ x: pick.x, y: pick.y, w: tw, h: 16 });
+        var tx = pick.a === "start" ? pick.x : pick.a === "end" ? pick.x + tw : pick.x + tw / 2;
+        s.appendChild(stext({ x: tx, y: pick.y + 12, "text-anchor": pick.a, class: "lab" }, t));
       });
-      var desc = [], labelled = { pre: {}, post: {} };
-      DF.units.forEach(function (u) {
-        var a = dfIdx(u.id, "baseline").dims[d.id], b = dfIdx(u.id, "current").dims[d.id];
-        if (!a || !b || a.score === null || b.score === null) return;
-        var cls = LINE[u.id];
-        s.appendChild(svg("line", { x1: x0, y1: Y(a.score), x2: x1, y2: Y(b.score), class: "sline " + cls }));
-        s.appendChild(svg("circle", { cx: x0, cy: Y(a.score), r: 4, class: "sdot " + cls }));
-        s.appendChild(svg("circle", { cx: x1, cy: Y(b.score), r: 4, class: "sdot " + cls }));
-        // Pairs that share a value share one label, so coinciding labels do not print on top of each other.
-        if (!labelled.post[num(b.score)]) {
-          labelled.post[num(b.score)] = true;
-          var lab = svg("text", { x: x1 + 6, y: Y(b.score) + 4, class: "sval " + cls });
-          lab.textContent = num(b.score);
-          s.appendChild(lab);
-        }
-        if (!labelled.pre[num(a.score)]) {
-          labelled.pre[num(a.score)] = true;
-          var lab0 = svg("text", { x: x0 - 6, y: Y(a.score) - 8, class: "sval " + cls, "text-anchor": "end" });
-          lab0.textContent = num(a.score);
-          s.appendChild(lab0);
-        }
-        desc.push(u.name + " " + num(a.score) + " to " + num(b.score));
-      });
-      s.setAttribute("aria-label", d.id + " " + d.name + ": " + desc.join("; "));
-      box.appendChild(s);
+      main.appendChild(s);
+    }
+    draw();
+  }
 
-      // Name the pairs whose lines lie exactly on top of each other, so a hidden line is not read as missing.
-      var same = {};
-      DF.units.forEach(function (u) {
-        var a = dfIdx(u.id, "baseline").dims[d.id], b = dfIdx(u.id, "current").dims[d.id];
-        var k = num(a.score) + "|" + num(b.score);
-        (same[k] = same[k] || []).push(u.name);
+  function pzLawMarket(main, opts) {
+    opts.appendChild(selectBox("Measure", KEY_OPTS, PZ.lm, function (v) { PZ.lm = v; draw(); }));
+    function draw() {
+      main.textContent = "";
+      main.appendChild(el("h3", null, "Law against market in the three EU gatekeeper–market pairs"));
+      main.appendChild(el("p", "pz-sub", keyName(PZ.lm) + ". De Jure at market level (" + DF_BASE + " and " + DJ_DATE + ") and De Facto (" +
+        DF_BASE + " and " + DF_NOW + "). The distance between the filled square and the filled circle is the implementation gap."));
+      main.appendChild(lawMarketRows(UNITS, [PZ.lm]));
+    }
+    draw();
+  }
+
+  function pzEffective(main, opts) {
+    opts.appendChild(selectBox("Observation", [["current", "Latest (" + DJ_DATE + " / " + DF_NOW + ")"], ["baseline", DF_BASE]], PZ.eff,
+      function (v) { PZ.eff = v; draw(); }));
+    function draw() {
+      main.textContent = "";
+      main.appendChild(el("h3", null, "Effective Contestability, shown beside both layers"));
+      main.appendChild(el("p", "pz-sub", "The paper's four ways of relating the two layers (equations 5 to 8), for each gatekeeper–market pair."));
+      var specs = D.paper.effectiveSpecs || [];
+      var t = el("table", "plain"), hr = el("tr");
+      ["Gatekeeper–market pair", "De Jure", "De Facto"].concat(specs.map(function (s) { return pretty(s.id) + " " + s.eq; })).forEach(function (x, i) {
+        hr.appendChild(el("th", i ? "num" : null, x));
       });
-      var overlap = Object.keys(same).filter(function (k) { return same[k].length > 1; })
-        .map(function (k) { return same[k].join(" and ") + " coincide"; });
-      var f = el("p", "small muted");
-      f.textContent = "Mean of the scored indicators · " + DF.units.map(function (u) {
-        var b = dfIdx(u.id, "current").dims[d.id];
-        return u.name + " " + b.nScored + " of " + b.nApplicable;
-      }).join(" · ") + (overlap.length ? ". Lines drawn on top of each other: " + overlap.join("; ") + "." : "");
-      box.appendChild(f);
-      host.appendChild(box);
+      t.appendChild(hr);
+      UNITS.forEach(function (u) {
+        var e = effOf(u, PZ.eff), tr = el("tr");
+        tr.appendChild(el("td", null, unitById[u].name));
+        var vals = e ? [e.deJure, e.deFacto, e.multiplicative, e.arithmetic, e.bottleneck, e.gap] : [null, null, null, null, null, null];
+        vals.forEach(function (v, i) {
+          var td = el("td", "num", num(v));
+          if (v !== null && i < 5) { paint(td, v); td.style.textAlign = "center"; td.style.fontWeight = "700"; }
+          tr.appendChild(td);
+        });
+        t.appendChild(tr);
+      });
+      main.appendChild(add(el("div", "table-scroll"), t));
+      var ul = el("ul", "small");
+      specs.forEach(function (s) { ul.appendChild(el("li", null, s.eq + " " + s.formula + ": " + s.use + ".")); });
+      main.appendChild(ul);
+      var rr = D.paper.reportingRequirements || {};
+      if (rr.effectiveTogether) main.appendChild(el("p", "small muted", "“" + rr.effectiveTogether + "” (" + rr.source + ")"));
+      main.appendChild(el("p", "small muted", "The gap is a difference between the layers, not a score, so it is not coloured. λ = " + D.meta.lambda +
+        ". A pair with no De Jure record at an observation date shows the De Facto score only."));
+    }
+    draw();
+  }
+
+  function pzPrevalence(main, opts) {
+    opts.appendChild(selectBox("Order", [["sorted", "Most required first"], ["id", "Category order"]], PZ.sorted ? "sorted" : "id",
+      function (v) { PZ.sorted = v === "sorted"; draw(); }));
+    function draw() {
+      main.textContent = "";
+      main.appendChild(el("h3", null, "How many of the " + words(nJ) + " jurisdictions require each obligation?"));
+      main.appendChild(el("p", "pz-sub", "De Jure, " + DJ_DATE + ". Each bar splits the " + words(nJ) + " jurisdictions by their score on that category."));
+      main.appendChild(prevalenceChart(PZ.sorted, false));
+    }
+    draw();
+  }
+
+  /* ========================================================== JURISDICTIONS */
+  function pageJurisdictions(app) {
+    app.appendChild(ctrlBar([jurSelect(null, "Choose a jurisdiction")]));
+    var s = section(), w = el("div", "wrap");
+    head(w, "Jurisdictions", "Nine profiles",
+      aiP("Each profile shows the De Jure index, the four dimensions and all " + words(nM) + " categories, with the legal basis for every score. " +
+          "The European Union profile also shows the De Facto observations for the three gatekeeper–market pairs.", "sec-intro"));
+    var cards = el("div", "jur-cards");
+    rankedBy("overall").forEach(function (c) {
+      var a = link("#/jurisdiction/" + c, ""), v = val(c, "overall"), n = counts(c);
+      a.className = "jur-card";
+      var t = el("div");
+      add(t, el("h3", null, jurName[c]), el("div", "r", "Rank " + rankOf(c, "overall") + " of " + nJ + " · " + n.full + " of " + nM + " categories in full"));
+      add(a, t, paint(el("div", "sb", num(v)), v));
+      cards.appendChild(a);
     });
-  })();
+    w.appendChild(cards);
+    s.appendChild(w);
+    app.appendChild(s);
+  }
 
-  (function dfChips() {
-    var host = $("#df-dim-chips");
-    D.dimensions.forEach(function (d) {
-      var b = el("button", "chip" + (d.id === dfDim ? " on" : ""), d.id + " " + d.name);
+  function pageJurisdiction(app, code) {
+    var j = jurByCode[code], a = D.aggregates[code], v = a.overall, n = counts(code), mf = mainForm(code);
+    document.title = j.name + " · The Contestability Index";
+    app.appendChild(ctrlBar([jurSelect(code)]));
+    var grid = el("div", "wrap profile-grid"), side = el("div", "profile-side"), main = el("div", "profile-main");
+    grid.style.padding = "0";
+
+    var mm = el("div", "mini-map");
+    mm.appendChild(drawWorld({ key: "overall", focus: code, viewBox: MINI_VIEW[code], interactive: true,
+                               label: "Map of " + j.name }));
+    side.appendChild(mm);
+    var list = el("div", "dimlist"), targets = {};
+    function jump(label, id, pressed) {
+      var b = el("button", null, label);
       b.type = "button";
-      b.setAttribute("aria-pressed", d.id === dfDim ? "true" : "false");
-      b.addEventListener("click", function () {
-        dfDim = d.id;
-        Array.prototype.forEach.call(host.children, function (c) {
-          var on = c.textContent.indexOf(dfDim) === 0;
-          c.classList.toggle("on", on);
-          c.setAttribute("aria-pressed", on ? "true" : "false");
-        });
-        renderDfDetail();
-      });
-      host.appendChild(b);
-    });
-  })();
-
-  function confBadge(v) {
-    var cls = v.indexOf("LOW") === 0 ? "conf-low" : v === "MODERATE" ? "conf-mod" : "conf-high";
-    return el("span", "badge " + cls, v.replace("-", "–"));
-  }
-  function statusPill(it, v) {
-    if (it.status === "missing") return el("span", "pill st-missing", "Missing");
-    if (it.status === "not_applicable") return el("span", "pill st-na", "N/A");
-    return el("span", "pill " + tier(v), glyph(v));
-  }
-
-  function renderDfDetail() {
-    var host = $("#df-detail");
-    host.textContent = "";
-    DF.units.forEach(function (u) {
-      var a = dfIdx(u.id, "baseline").dims[dfDim], b = dfIdx(u.id, "current").dims[dfDim];
-      var card = el("div", "df-card");
-      var head = el("div", "df-card-head");
-      head.appendChild(el("h3", null, u.name));
-      head.appendChild(el("span", "muted small", dfDim + " " + num(a.score) + " → " + num(b.score) + " · " +
-        b.nScored + " of " + b.nApplicable + " applicable indicators scored"));
-      card.appendChild(head);
-
-      DF.items.filter(function (it) { return it.unit === u.id && it.dim === dfDim; }).forEach(function (it) {
-        var m = mechById[it.mechanism];
-        var det = el("details", "subrow");
-        var sum = el("summary");
-        sum.appendChild(el("span", "sub-id", m.code));
-        sum.appendChild(el("span", "sub-label", m.indicator));
-        sum.appendChild(statusPill(it, it.pre));
-        if (it.status === "scored") {
-          sum.appendChild(el("span", "arrow", "→"));
-          sum.appendChild(statusPill(it, it.post));
-          sum.appendChild(el("span", "sub-delta " + (it.delta > 0 ? "up" : "flat"),
-            it.delta > 0 ? "+" + num(it.delta) : "±0"));
-          if (it.confidence) sum.appendChild(confBadge(it.confidence));
-        }
-        det.appendChild(sum);
-
-        var body = el("div", "subbody");
-        body.appendChild(el("h5", null, "Evidence and scoring rationale"));
-        body.appendChild(el("p", null, it.evidence || "—"));
-        if (it.sources.length) {
-          body.appendChild(el("h5", null, "Sources"));
-          var ul = el("ul", "link-list");
-          it.sources.forEach(function (l) {
-            var li = el("li");
-            if (l.url) {
-              li.appendChild(extLink(l.url, l.title));
-              li.appendChild(el("span", "muted small", " · " + domain(l.url)));
-            } else {
-              li.appendChild(el("span", null, l.title + " (no link recorded)"));
-            }
-            ul.appendChild(li);
-          });
-          body.appendChild(ul);
-        }
-        body.appendChild(el("p", "small muted", "The same mechanism in the de jure layer: category " + m.id +
-          ", " + m.name + "."));
-        det.appendChild(body);
-        card.appendChild(det);
-      });
-      host.appendChild(card);
-    });
-  }
-  renderDfDetail();
-
-  (function obligationMap() {
-    var host = $("#obligation-map");
-    var t = el("table", "plain");
-    var head = el("tr");
-    ["Dimension", "DMA obligations observed", "Indicators"].forEach(function (x) { head.appendChild(el("th", null, x)); });
-    t.appendChild(head);
-    D.dimensions.forEach(function (d) {
-      var tr = el("tr");
-      tr.appendChild(el("td", null, d.id + " · " + d.name));
-      var td = el("td", "small");
-      d.dmaObligations.split(/;\s*/).filter(Boolean).forEach(function (o) { td.appendChild(el("div", null, o.trim())); });
-      tr.appendChild(td);
-      tr.appendChild(el("td", "small muted", D.mechanisms.filter(function (m) { return m.dimension === d.id; })
-        .map(function (m) { return m.code + " " + m.indicator; }).join(" · ")));
-      t.appendChild(tr);
-    });
-    host.appendChild(t);
-    var gen = [];
-    DF.units.forEach(function (u) {
-      (DF.generalSources[u.id] || []).forEach(function (s) {
-        if (gen.every(function (g) { return g.url !== s.url; })) gen.push(s);
-      });
-    });
-    if (gen.length) {
-      var p = el("p", "small muted", "Cited for every observation: ");
-      gen.forEach(function (s, i) {
-        if (i) p.appendChild(document.createTextNode("; "));
-        p.appendChild(s.url ? extLink(s.url, s.title) : document.createTextNode(s.title));
-      });
-      host.appendChild(p);
+      if (pressed) b.setAttribute("aria-pressed", "true");
+      b.addEventListener("click", function () { scrollToEl(targets[id]); });
+      list.appendChild(b);
     }
-  })();
+    jump("Overall index score", "overall", true);
+    list.appendChild(el("div", "lab", "Explore by dimension"));
+    DIMS.forEach(function (d, i) { jump((i + 1) + " | " + dimById[d].name, d); });
+    list.appendChild(el("div", "lab", "More"));
+    jump("Law and market", "lawmarket");
+    jump("Legal sources", "legal");
+    side.appendChild(list);
 
-  /* ========================================================== MARKETS */
+    main.appendChild(el("h1", "pname", j.name));
+    var info = el("div", "pinfo");
+    [["Snapshot", DJ_DATE], ["Categories in full", n.full + " of " + nM], ["Most common legal form", pretty(mf.label) + " (" + mf.n + " of " + nM + ")"],
+     ["Instruments on record", String((D.instruments[code] || []).length)]].forEach(function (x) {
+      info.appendChild(add(el("div"), el("span", null, x[0]), el("b", null, x[1])));
+    });
+    main.appendChild(info);
+    var tabs = el("div", "ptabs");
+    [["Overall", "overall"], ["Dimensions", "D1"], ["Law and market", "lawmarket"], ["Legal sources", "legal"]].forEach(function (x) {
+      var t = link("#/jurisdiction/" + code, x[0]);
+      t.addEventListener("click", function (e) { e.preventDefault(); scrollToEl(targets[x[1]]); });
+      tabs.appendChild(t);
+    });
+    main.appendChild(tabs);
 
-  (function marketMatrix() {
-    var host = $("#market-matrix");
-    var cov = D.markets.coverage;
-    var markets = [];
-    cov.forEach(function (r) { if (markets.indexOf(r.market) === -1) markets.push(r.market); });
-    var byKey = {};
-    cov.forEach(function (r) { byKey[r.market + "|" + r.jurisdiction] = r; });
-
-    function regimeClass(regime) {
-      if (!regime || regime === "none") return "rg-none";
-      if (regime === "pending") return "rg-pending";
-      if (regime.indexOf("ex_ante") === 0) return "rg-exante";
-      if (regime.indexOf("court") === 0 || regime.indexOf("designated") === 0) return "rg-targeted";
-      return "rg-other";
+    /* overall */
+    var ov = el("div", "card");
+    targets.overall = ov;
+    ov.appendChild(el("h2", null, j.name + " Overall Score, " + DJ_DATE));
+    var og = el("div", "overall"), ol = el("div");
+    ol.appendChild(el("p", "box-label", "De Jure index"));
+    ol.appendChild(scoreBox(v));
+    add(ol, add(el("p", "rankline"), el("span", null, "Rank"), el("b", null, rankOf(code, "overall") + " / " + nJ)),
+        add(el("p", "rankline"), el("span", null, "Average of " + words(nJ)), el("b", null, num(avgOf("overall")))),
+        add(el("p", "rankline"), el("span", null, "Scores 1 · ½ · 0"), el("b", null, n.full + " · " + n.part + " · " + n.none)));
+    var or = el("div");
+    var level = CODES.filter(function (c) { return c !== code && val(c, "overall") === v; });
+    or.appendChild(el("p", "small", cap(theName(code)) + " ranks " + ordinal(rankOf(code, "overall")) + " of " + nJ + " jurisdictions" +
+      (level.length ? ", level with " + theNames(level) : "") + "."));
+    or.appendChild(rankColumns(code, "overall"));
+    add(og, ol, or);
+    ov.appendChild(og);
+    if (j.enforcementNote) {
+      ov.appendChild(el("h4", null, "Enforcement and legal setting"));
+      ov.appendChild(el("p", "small", j.enforcementNote));
     }
+    var disc = (D.paper.discrepancies || []).filter(function (d) { return d.code === code; })[0];
+    if (disc) {
+      var cw = el("div", "callout warn");
+      cw.appendChild(aiP("This jurisdiction differs from the published working paper (" + disc.detail.join("; ") + "). " + disc.why));
+      ov.appendChild(cw);
+    }
+    main.appendChild(ov);
 
-    var table = el("table", "heat");
-    var hr = el("tr");
-    hr.appendChild(el("th", "corner", "Market"));
-    ranked.forEach(function (c) { hr.appendChild(el("th", "jur-head", c)); });
-    table.appendChild(hr);
-
-    markets.forEach(function (mk) {
-      var tr = el("tr");
-      tr.appendChild(el("th", "mech-name", mk));
-      ranked.forEach(function (code) {
-        var r = byKey[mk + "|" + code];
-        var td = el("td", "cell-td");
-        var b = el("button", "cell mk " + regimeClass(r && r.regime), "");
-        b.type = "button";
-        b.setAttribute("aria-label", mk + ", " + jurName[code] + ", regime " + ((r && r.regime) || "none"));
-        withTip(b, function () {
-          if (!r) return [mk + " · " + jurName[code], "No record"];
-          var l = [mk + " · " + jurName[code], "Regime: " + pretty(r.regime)];
-          if (r.instruments) l.push("Instruments: " + r.instruments);
-          if (r.firms) l.push("Firms: " + r.firms);
-          return l;
+    /* dimensions with their categories */
+    var dc = el("div", "card");
+    dc.appendChild(el("h2", null, j.name + " by Dimension"));
+    DIMS.forEach(function (d, i) {
+      var b = el("div", "dimblock");
+      targets[d] = b;
+      var hd = el("div", "dimblock-head");
+      add(hd, el("h3", null, "Dimension " + (i + 1) + " | " + dimById[d].name), link("#/scoring", "More info"));
+      b.appendChild(hd);
+      var q = (D.paper.dimensionQuestions || {})[d];
+      if (q) b.appendChild(el("p", "small muted", q.question));
+      var top = el("div", "dimblock-top"), lt = el("div");
+      lt.appendChild(scoreBox(a.dims[d], "sm"));
+      var mech = D.mechanisms.filter(function (m) { return m.dimension === d; });
+      var full = mech.filter(function (m) { return cellOf(m.id, code).score === 1; }).length;
+      var r3 = el("div", "ranks3");
+      add(r3, el("span", null, "Rank"), el("b", null, rankOf(code, d) + " / " + nJ), el("span", null, "Average of " + words(nJ)),
+          el("b", null, num(avgOf(d))), el("span", null, "Categories in full"), el("b", null, full + " of " + mech.length));
+      add(top, lt, r3);
+      b.appendChild(top);
+      b.appendChild(strip(code, d));
+      var cats = el("div", "cats");
+      mech.forEach(function (m) {
+        var c = cellOf(m.id, code), row = el("div", "cat-row");
+        row.appendChild(el("span", "n", m.id + "."));
+        row.appendChild(el("span", null, m.name));
+        row.appendChild(paint(el("span", "pill", glyph(c.score)), c.score));
+        var fc = el("span", "fchips"), informative = c.binding && c.binding.length < 3;
+        [["E", "existence"], ["S", "scope"], ["Enf", "enforceability"]].forEach(function (f) {
+          var chip = el("span", informative && c.binding.indexOf(f[1]) !== -1 ? "bind" : null, f[0] + " " + glyph(c[f[1]]));
+          chip.title = pretty(f[1]) + " " + c[f[1]] + (chip.className ? " (binding)" : "");
+          fc.appendChild(chip);
         });
-        b.addEventListener("click", function () { openMarketCell(r, mk, code); });
-        td.appendChild(b);
-        tr.appendChild(td);
+        row.appendChild(fc);
+        var bs = el("span", "basis", c.instrument_basis || "—");
+        bs.title = c.instrument_basis || "";
+        row.appendChild(bs);
+        var btn = el("button", null, "Details");
+        btn.type = "button";
+        btn.addEventListener("click", function () { matrixOrder = CODES; openCell(m.id, code); });
+        row.appendChild(btn);
+        cats.appendChild(row);
       });
-      table.appendChild(tr);
+      b.appendChild(cats);
+      dc.appendChild(b);
     });
-    host.appendChild(table);
+    dc.appendChild(scoreKey(false));
+    main.appendChild(dc);
 
-    var lg = $("#market-legend");
-    [["rg-exante", "Ex ante statute"], ["rg-targeted", "Targeted order or designation"],
-     ["rg-other", "Other binding instrument"], ["rg-pending", "Announced, not in force"],
-     ["rg-none", "No instrument on point"]].forEach(function (p) {
-      var k = el("span", "key");
-      k.appendChild(el("span", "swatch " + p[0]));
-      k.appendChild(el("span", null, p[1]));
-      lg.appendChild(k);
-    });
-  })();
-
-  function openMarketCell(r, mk, code) {
-    ttHide();
-    panel.textContent = "";
-    var close = el("button", "close", "×");
-    close.type = "button";
-    close.setAttribute("aria-label", "Close detail panel");
-    close.addEventListener("click", closePanel);
-    panel.appendChild(close);
-    panel.appendChild(el("p", "crumb", "Market coverage"));
-    panel.appendChild(el("h2", null, mk));
-    panel.appendChild(el("p", "jname", jurName[code]));
-    if (!r) {
-      panel.appendChild(el("p", "muted", "No record for this pair."));
+    /* law and market */
+    var lm = el("div", "card");
+    targets.lawmarket = lm;
+    lm.appendChild(el("h2", null, "Law and Market"));
+    if (code === "EU") {
+      lm.appendChild(aiP("For the three gatekeeper–market pairs, the De Jure score is measured again at market level, for the obligations " +
+        "that bind that market, and the De Facto score records what was observed. Hollow marks are " + DF_BASE + "; filled marks are the latest observation."));
+      UNITS.forEach(function (u) {
+        lm.appendChild(el("h4", null, unitById[u].name + " · " + unitById[u].gatekeeper + " · " + unitById[u].market));
+        lm.appendChild(lawMarketRows([u], KEYS));
+      });
+    } else if (code === "DE") {
+      lm.appendChild(aiP(["Germany is covered by the EU's De Facto observations, which are made for three gatekeeper–market pairs across the European Union: see the ",
+        link("#/jurisdiction/EU", "European Union profile"), "."]));
     } else {
-      panel.appendChild(el("span", "badge", pretty(r.regime)));
-      if (r.instruments) { panel.appendChild(el("h4", null, "Binding instruments")); panel.appendChild(el("p", null, r.instruments)); }
-      if (r.provisions) { panel.appendChild(el("h4", null, "Categories covered")); panel.appendChild(el("p", null, r.provisions)); }
-      if (r.firms) { panel.appendChild(el("h4", null, "Firms reached")); panel.appendChild(el("p", null, r.firms)); }
-      if (r.notes) { panel.appendChild(el("h4", null, "Notes")); panel.appendChild(el("p", null, r.notes)); }
+      lm.appendChild(aiP("De Facto contestability has not been measured for " + theName(code) + ". The De Facto layer covers three gatekeeper–market pairs in the European Union, so this profile shows the law only."));
     }
-    panel.hidden = false;
-    requestAnimationFrame(function () { panel.classList.add("open"); });
-    close.focus();
+    main.appendChild(lm);
+
+    /* legal sources */
+    var lc = el("div", "card");
+    targets.legal = lc;
+    lc.appendChild(el("h2", null, "Legal Sources"));
+    var inst = D.instruments[code] || [];
+    if (inst.length) {
+      var ul = el("ul", "link-list");
+      inst.forEach(function (i) {
+        var li = el("li");
+        add(li, el("strong", null, i.name), i.citation ? el("span", "muted small", " · " + i.citation) : null,
+            i.pipeline ? el("span", "badge warn", "Not in force") : null, " ", i.url ? extLink(i.url, i.sourceLabel || domain(i.url)) : null);
+        if (i.status) li.appendChild(el("div", "small muted", i.status));
+        ul.appendChild(li);
+      });
+      lc.appendChild(ul);
+    }
+    var docs = D.documents.filter(function (d) { return d.jurisdiction === code; });
+    var ex = Object.keys(D.cells).filter(function (k) { return k.split("|")[1] === code; })
+      .reduce(function (s, k) { return s + ((D.cells[k].extracts || []).length); }, 0);
+    lc.appendChild(add(el("p", "small"), docs.length + " full texts and " + ex + " verbatim provisions on file. ",
+                       link("#/legal/" + code, "Open them on the Legal Documents page →")));
+    main.appendChild(lc);
+
+    add(grid, side, main);
+    app.appendChild(grid);
   }
 
-  (function marketDeJure() {
-    var host = $("#market-dj");
-    var rows = D.markets.deJure;
-    if (!rows.length) { host.appendChild(el("p", "muted", "No market-level scoring on file.")); return; }
-    var PERIOD = { current: "June 2026", baseline: "December 2023 baseline" };
-    D.deFacto.units.forEach(function (u) {
-      ["current", "baseline"].forEach(function (p) {
-        var sub = rows.filter(function (r) { return r.unit === u.id && r.period === p; });
-        if (!sub.length) return;
-        var idx = D.markets.index["de_jure|" + u.id + "|" + p];
-        var card = el("div", "df-card");
-        var head = el("div", "df-card-head");
-        head.appendChild(el("h3", null, u.market + " · " + u.name + " · " + PERIOD[p]));
-        head.appendChild(el("span", "muted small", sub.length + " categories · index " + num(idx && idx.index)));
-        card.appendChild(head);
-        if (sub[0].note) card.appendChild(el("p", "small muted", sub[0].note));
-        sub.forEach(function (r) {
-          var m = mechById[r.mechanism] || { name: "Category " + r.mechanism };
-          var det = el("details", "subrow");
-          var sum = el("summary");
-          sum.appendChild(el("span", "sub-id", String(r.mechanism)));
-          sum.appendChild(el("span", "sub-label", m.name));
-          sum.appendChild(el("span", "pill " + tier(r.score), glyph(r.score)));
-          sum.appendChild(el("span", "muted small", r.provision || ""));
-          det.appendChild(sum);
-          var body = el("div", "subbody");
-          body.appendChild(el("p", "small", "min(E " + r.existence + ", S " + r.scope + ", Enf " + r.enforceability +
-            ") = " + r.score + " · legal form " + r.form + " · " + pretty(r.applicability)));
-          if (r.hook) { body.appendChild(el("h5", null, "What makes it apply to this market")); body.appendChild(el("p", null, r.hook)); }
-          if (r.extract) { body.appendChild(el("h5", null, "Verbatim")); body.appendChild(el("blockquote", null, r.extract)); }
-          if (r.rationale) { body.appendChild(el("h5", null, "Rationale")); body.appendChild(el("p", null, r.rationale)); }
-          det.appendChild(body);
-          card.appendChild(det);
-        });
-        host.appendChild(card);
-      });
-    });
-  })();
+  /* ========================================================== CASE STUDIES */
+  function pageCases(app) {
+    document.title = "Case studies · The Contestability Index";
+    var s = section(), w = el("div", "wrap");
+    head(w, "Case studies", "Three cases",
+      aiP("These cases are drafts that show how the data can tell a specific story. Which cases the site should carry, and who writes them, is still open.", "sec-intro"));
+    s.appendChild(w);
+    app.appendChild(s);
 
-  /* ====================================================== METHODOLOGY */
-  (function methodology() {
-    var h = $("#methodology");
-    function head(t) { h.appendChild(el("h2", null, t)); }
-    function para(t) { h.appendChild(el("p", null, t)); }
-
-    head("What the index measures");
-    para("The index separates two questions that are often merged. The de jure layer measures the " +
-      "strength of the formal legal, regulatory and institutional conditions that support competitive " +
-      "challenge. It does not measure compliance or realised market effects. The de facto layer asks " +
-      "whether users and rivals can actually exercise the corresponding competitive opportunity in a " +
-      "defined market. Any combination of the two is a derived summary, not a separately observed quantity.");
-
-    head("Relating the two layers");
-    para("There is no uniquely correct way to combine a de jure and a de facto score. The paper gives four " +
-      "specifications and uses the product for contestability that is both formally supported and practically " +
-      "realised. The front page reports all four for every gatekeeper–market pair, with the arithmetic mean at " +
-      "λ = " + D.meta.lambda + " (equal weighting), and keeps the two component scores visible beside them.");
-    var st = el("table", "plain");
-    var sh = el("tr");
-    ["Specification", "Formula", "When it is appropriate"].forEach(function (x) { sh.appendChild(el("th", null, x)); });
-    st.appendChild(sh);
-    D.paper.effectiveSpecs.forEach(function (s) {
-      var tr = el("tr");
-      tr.appendChild(el("td", null, pretty(s.id) + " " + s.eq));
-      tr.appendChild(el("td", "mono", s.formula));
-      tr.appendChild(el("td", "small", s.use));
-      st.appendChild(tr);
-    });
-    h.appendChild(st);
-
-    head("The four dimensions");
-    var dt = el("table", "plain");
-    var dh = el("tr");
-    ["", "Dimension", "De jure category = de facto indicator"].forEach(function (x) { dh.appendChild(el("th", null, x)); });
-    dt.appendChild(dh);
-    D.dimensions.forEach(function (d) {
-      var tr = el("tr");
-      tr.appendChild(el("td", null, d.id));
-      tr.appendChild(el("td", null, d.name));
-      var td = el("td", "small");
-      D.mechanisms.filter(function (m) { return m.dimension === d.id; }).forEach(function (m) {
-        td.appendChild(el("div", null, m.id + ". " + m.name + " = " + m.code + " " + m.indicator));
-      });
-      tr.appendChild(td);
-      dt.appendChild(tr);
-    });
-    h.appendChild(dt);
-    para("Each mechanism belongs to exactly one dimension. Data portability sits in D1 because its " +
-      "principal function is to lower the cost of leaving. A rival's access to competitively necessary " +
-      "data sits in D4. A platform using a business user's non-public data to compete against that user " +
-      "sits in D3, because it is discriminatory platform conduct rather than a data-access question.");
-
-    head("Scoring");
-    para("Every observation is scored on three factors. Existence asks whether an operative obligation " +
-      "addressing the mechanism is present. Scope asks what range of firms, services, markets or " +
-      "activities it covers. Enforceability asks whether it is supported by credible oversight, " +
-      "sanctions, judicial supervision or private enforcement. Each takes 0, 0.5 or 1, and the score " +
-      "for the observation is the minimum of the three.");
-    para("The minimum rule reflects the complementarity of the three factors. A broad enforcement system " +
-      "cannot compensate for the absence of an operative obligation; an obligation binding a single named " +
-      "firm does not deliver what a generally applicable rule delivers; and a broadly written obligation " +
-      "without credible enforcement may provide little effective protection.");
-
-    head("Three coding states");
-    var cs = el("table", "plain");
-    Object.keys(D.paper.codingStates).forEach(function (k) {
-      var tr = el("tr");
-      tr.appendChild(el("th", null, k));
-      tr.appendChild(el("td", "small", D.paper.codingStates[k]));
-      cs.appendChild(tr);
-    });
-    h.appendChild(cs);
-    para("These are deliberately distinct. A score of zero is a finding about the world. Not Applicable " +
-      "is a statement about measurement scope. Missing is a statement about evidence. Collapsing them " +
-      "would let an evidence gap read as an absence of protection.");
-
-    head("Aggregation");
-    para("A dimension score is the unweighted mean of the scored observations within it, so a dimension " +
-      "with fewer applicable indicators has a smaller denominator rather than implicit zeros. The index " +
-      "is the equal-weighted mean of the four dimension scores. Equal weighting is the benchmark because " +
-      "it is transparent and reproducible and imposes no assumption about the relative economic " +
-      "importance of the four channels. Alternative weights belong in a robustness exercise; this site " +
-      "reports the equal-weight benchmark only.");
-
-    head("Why this site is built as a drill-down");
-    var rr = D.paper.reportingRequirements || {};
-    para("The shape of this site is not a stylistic choice. The methodology manual states what a " +
-      "report of these results must contain, and the list is what these pages deliver.");
-    var rl = el("ul");
-    (rr.mustReport || []).forEach(function (t) { rl.appendChild(el("li", null, pretty(t))); });
-    h.appendChild(rl);
-    if (rr.traceability) para(rr.traceability);
-    if (rr.effectiveTogether) para(rr.effectiveTogether + " That is why the front page shows the " +
-      "two component scores as bars beside all four ways of combining them, rather than presenting a single " +
-      "composite number on its own.");
-
-    head("Legal-form taxonomy");
-    para("Instruments are classified by how their substantive obligations become operative. The typical " +
-      "factor treatment below is a coding benchmark rather than an automatic score: the legal text and " +
-      "institutional setting of the individual observation remain controlling.");
-    var lf = el("table", "plain");
-    var lh = el("tr");
-    ["Form", "Definition", "Typical factor treatment"].forEach(function (x) { lh.appendChild(el("th", null, x)); });
-    lf.appendChild(lh);
-    D.legalForms.forEach(function (f) {
-      var tr = el("tr");
-      tr.appendChild(el("td", "mono", f.code));
-      var td = el("td", "small");
-      td.appendChild(el("strong", null, f.name));
-      td.appendChild(el("div", null, f.definition));
-      tr.appendChild(td);
-      tr.appendChild(el("td", "small muted", f.signature));
-      lf.appendChild(tr);
-    });
-    h.appendChild(lf);
-
-    head("Confidence");
-    var cf = el("table", "plain");
-    ["High", "Moderate", "Low"].forEach(function (k) {
-      var tr = el("tr");
-      tr.appendChild(el("th", null, k));
-      tr.appendChild(el("td", "small", D.paper.confidenceLevels[k]));
-      cf.appendChild(tr);
-    });
-    h.appendChild(cf);
-    para(D.paper.confidenceLevels.note);
-
-    head("What this site shows, and where it differs from the paper");
-    var disc = D.paper.discrepancies || [];
-    if (disc.length) {
-      var box = el("div", "callout warn-callout");
-      box.appendChild(el("strong", null, "De jure: " + disc.length +
-        (disc.length === 1 ? " jurisdiction differs" : " jurisdictions differ") + " from the published table. "));
-      box.appendChild(document.createTextNode(
-        "The other jurisdictions reproduce it exactly. The paper's Table 3 covers fifteen obligation categories; " +
-        "this site covers sixteen."));
-      var dl = el("ul", "small");
-      disc.forEach(function (d) { dl.appendChild(el("li", null, d.name + " (" + d.detail.join("; ") + "). " + (d.whyShort || d.why))); });
-      box.appendChild(dl);
-      if (D.paper.handbook && D.paper.handbook.note) {
-        box.appendChild(el("div", "small", D.paper.handbook.note + " The handbook prints " +
-          D.paper.handbook.ukIndex + "."));
-      }
-      h.appendChild(box);
+    /* case 1: the pair whose De Facto score rose most */
+    var ups = UNITS.map(function (u) { return { u: u, a: mVal("de_facto", u, "baseline", "overall"), b: mVal("de_facto", u, "current", "overall") }; })
+      .filter(function (x) { return x.a !== null && x.b !== null; }).sort(function (x, y) { return (y.b - y.a) - (x.b - x.a); });
+    var c1 = ups[0], u1 = unitById[c1.u], post = mIdx("de_facto", c1.u, "current");
+    var items = D.deFacto.items.filter(function (it) { return it.unit === c1.u; });
+    var changed = items.filter(function (it) { return it.status === "scored" && it.delta > 0; }).sort(function (a, b) { return b.delta - a.delta || a.mechanism - b.mechanism; });
+    var missing = items.filter(function (it) { return it.status === "missing"; }).length;
+    var dimUp = DIMS.filter(function (d) { return mVal("de_facto", c1.u, "current", d) > mVal("de_facto", c1.u, "baseline", d); });
+    var cs1 = caseCard(app, "Case 1", u1.name + ", " + DF_BASE + " to " + DF_NOW,
+      [[num(c1.a) + " → " + num(c1.b), "De Facto index"], ["+" + num(c1.b - c1.a), "change"], [post.nScored + " of " + post.nApplicable, "applicable indicators scored"]]);
+    cs1.text.appendChild(aiP("The Digital Markets Act designation of " + u1.gatekeeper + " for " + u1.service.replace(/ \(.*\)$/, "") + " dates from " +
+      day(u1.designationDate) + ". In " + DF_BASE + ", before the Act's obligations applied, the pair scored " + num(c1.a) + " on the De Facto index; in " + DF_NOW +
+      " it scored " + num(c1.b) + ", the largest increase of the " + words(nU) + " pairs on this site."));
+    if (changed.length) {
+      var big = changed[0], bm = mechById[big.mechanism];
+      cs1.text.appendChild(aiP((dimUp.length === nD ? "The increase is spread across all " + words(nD) + " dimensions. " :
+        "The increase comes from " + listText(dimUp) + ". ") + "The largest change at indicator level is " + bm.code + " " + bm.indicator.toLowerCase() +
+        ", from " + num(big.pre) + " to " + num(big.post) + "; " + words(changed.length) + " indicators rose in all."));
     }
+    cs1.text.appendChild(aiP("What the case does not show: the comparison is before and after, so it does not separate the Act from other changes in the market. " +
+      cap(words(missing)) + " of the " + words(post.nApplicable) + " applicable indicators had too little evidence to score and are left out of the index."));
+    cs1.viz.appendChild(lawMarketRows([c1.u], KEYS));
+    var tl = el("div");
+    tl.appendChild(el("h4", null, "Indicators that changed, with the coded evidence"));
+    changed.forEach(function (it) {
+      var m = mechById[it.mechanism], d = el("details", "fold"), sm = el("summary");
+      add(sm, m.code + " " + m.indicator, el("span", "meta", num(it.pre) + " → " + num(it.post) + (it.confidence ? " · confidence " + it.confidence.toLowerCase() : "")));
+      d.appendChild(sm);
+      var body = el("div", "body");
+      body.appendChild(el("p", null, it.evidence || "—"));
+      if (it.sources.length) {
+        var ul = el("ul", "link-list");
+        it.sources.forEach(function (l) { ul.appendChild(add(el("li"), l.url ? extLink(l.url, l.title) : l.title)); });
+        body.appendChild(ul);
+      }
+      d.appendChild(body);
+      tl.appendChild(d);
+    });
+    cs1.wide.appendChild(tl);
+
+    /* case 2: one law, three markets */
+    var djs = UNITS.map(function (u) { return mVal("de_jure", u, "current", "overall"); });
+    var dfs = UNITS.map(function (u) { return mVal("de_facto", u, "current", "overall"); });
+    var cs2 = caseCard(app, "Case 2", "One law, three markets",
+      UNITS.map(function (u, i) { return [num(dfs[i]), "De Facto, " + unitById[u].name]; }));
+    var same = djs.every(function (x) { return x === djs[0]; });
+    var leaders = DIMS.map(function (d) {
+      var best = UNITS.slice().sort(function (a, b) { return mVal("de_facto", b, "current", d) - mVal("de_facto", a, "current", d); });
+      var top = mVal("de_facto", best[0], "current", d);
+      return { d: d, who: best.filter(function (u) { return mVal("de_facto", u, "current", d) === top; }), v: top };
+    });
+    cs2.text.appendChild(aiP((same ? "In " + DJ_DATE + " the same EU obligations apply to all " + words(nU) + " pairs: each has a market-level De Jure score of " + num(djs[0]) + ". " : "") +
+      "Their De Facto scores in " + DF_NOW + " are " + listText(UNITS.map(function (u, i) { return num(dfs[i]) + " for " + unitById[u].name; })) +
+      ". The dimensions differ more than the totals: " + leaders.map(function (l) {
+        return l.d + " is highest for " + listText(l.who.map(function (u) { return unitById[u].name; })) + " (" + num(l.v) + ")";
+      }).join("; ") + "."));
+    cs2.text.appendChild(aiP("Google Play is scored on the app-distribution record of the market-level De Jure layer, because the same obligations bind both app stores; " +
+      "it has no " + DF_BASE + " De Jure record."));
+    cs2.viz.appendChild(seriesKey(UNITS.map(function (u) { return { label: unitById[u].name, color: UNIT_COLOR[u], shape: "sq" }; })));
+    cs2.viz.appendChild(pairDims());
+
+    /* case 3: Japan */
+    if (jurByCode.JP) {
+      var jn = counts("JP"), jv = val("JP", "overall");
+      var fullJP = D.mechanisms.filter(function (m) { return cellOf(m.id, "JP").score === 1; });
+      var msca = fullJP.filter(function (m) { return /MSCA/.test(cellOf(m.id, "JP").instrument_basis || ""); });
+      var zeros = D.mechanisms.filter(function (m) { return cellOf(m.id, "JP").score === 0; });
+      var cs3 = caseCard(app, "Case 3", "Japan: a law written for smartphones",
+        [[num(jv), "De Jure index"], [ordinal(rankOf("JP", "overall")) + " of " + nJ, "rank"], [jn.full + " · " + jn.part + " · " + jn.none, "categories at 1 · ½ · 0"]]);
+      cs3.text.appendChild(aiP("Japan scores " + num(jv) + ", the highest outside the European Union and Germany. " +
+        (msca.length === fullJP.length ? "All " + words(fullJP.length) : cap(words(msca.length)) + " of the " + words(fullJP.length)) +
+        " categories it requires in full rest on the Mobile Software Competition Act (Act 58/2024), which the coding records as in full force since 18 December 2025."));
+      cs3.text.appendChild(aiP("Japan scores 0.5 in " + words(jn.part) + " categories and 0 in " + words(jn.none) + (zeros.length ? ": " + listText(zeros.map(function (m) { return m.name.toLowerCase(); })) : "") +
+        ". The table shows which factor holds each partial score down."));
+      var t = el("table", "plain"), hr = el("tr");
+      ["Category", "Score", "Existence", "Scope", "Enforceability", "Basis"].forEach(function (x) { hr.appendChild(el("th", null, x)); });
+      t.appendChild(hr);
+      D.mechanisms.filter(function (m) { return cellOf(m.id, "JP").score < 1; }).forEach(function (m) {
+        var c = cellOf(m.id, "JP"), tr = el("tr");
+        tr.appendChild(el("td", null, m.id + ". " + m.name));
+        [c.score, c.existence, c.scope, c.enforceability].forEach(function (x) { tr.appendChild(paint(el("td", "sc", glyph(x)), x)); });
+        tr.appendChild(el("td", "small", c.instrument_basis || "—"));
+        t.appendChild(tr);
+      });
+      cs3.wide.appendChild(add(el("div", "table-scroll"), t));
+      cs3.viz.appendChild(hbars(KEYS.map(function (k) {
+        return { label: keyShort(k), value: val("JP", k), tip: function () { return ["Japan · " + keyName(k) + ": " + num(val("JP", k))]; } };
+      }), { labelW: 170, label: "Japan by dimension" }));
+      cs3.wide.appendChild(add(el("p", "small"), link("#/jurisdiction/JP", "Open the Japan profile →")));
+    }
+  }
+  function caseCard(app, kicker, title, big) {
+    var s = section("alt"), w = el("div", "wrap"), c = el("div", "kp case"), t = el("div"), v = el("div", "viz"), wide = el("div");
+    t.appendChild(el("p", "qn", kicker));
+    t.appendChild(el("h3", null, title));
+    if (big) {
+      var b = el("div", "big");
+      big.forEach(function (x) { b.appendChild(add(el("div"), el("b", null, x[0]), el("span", null, x[1]))); });
+      t.appendChild(b);
+    }
+    add(c, t, v);
+    add(w, c, wide);
+    wide.style.marginTop = "14px";
+    s.appendChild(w);
+    app.appendChild(s);
+    return { text: t, viz: v, wide: wide };
+  }
+  // De Facto by dimension for the three pairs, latest observation, with the market-level De Jure as a reference.
+  function pairDims() {
+    var w = 560, lw = 180, bh = 12, gap = 2, gpad = 16, top = 22, gh = nU * (bh + gap) - gap, h = top + DIMS.length * (gh + gpad) + 4;
+    var s = svg("svg", { viewBox: "0 0 " + w + " " + h, class: "chart", role: "img", "aria-label": "De Facto by dimension for the three pairs" });
+    function X(v) { return lw + v * (w - lw - 44); }
+    xGrid(s, X, top - 4, h - 4, true);
+    DIMS.forEach(function (d, gi) {
+      var y0 = top + gi * (gh + gpad) + gpad / 2;
+      s.appendChild(stext({ x: lw - 10, y: y0 + gh / 2 + 4, "text-anchor": "end", class: "lab" }, d + " " + DIM_SHORT[d]));
+      UNITS.forEach(function (u, i) {
+        var v = mVal("de_facto", u, "current", d), y = y0 + i * (bh + gap);
+        if (v === null) return;
+        var b = barPath(X(0), y, X(v) - X(0), bh);
+        if (b) { b.setAttribute("fill", UNIT_COLOR[u]); s.appendChild(b); }
+        s.appendChild(stext({ x: X(v) + 5, y: y + bh - 2, class: "val" }, num(v)));
+        tipRect(s, X(0), y, w - X(0), bh, function () { return [unitById[u].name, d + " De Facto, " + DF_NOW + ": " + num(v), "De Jure, market level: " + num(mVal("de_jure", u, "current", d))]; });
+      });
+    });
+    return s;
+  }
+
+  /* ========================================================== SCORING RULES */
+  function pageScoring(app) {
+    document.title = "Scoring rules · The Contestability Index";
+    var s = section(), w = el("div", "wrap");
+    head(w, "Scoring rules", "How a score is built",
+      aiP(["Every score on this site is built the same way, from one assessment per obligation category upward. This page summarises the rules; the ",
+           extLink(APPENDIX, "online appendix"), " gives them in full."], "sec-intro"));
+    var flow = el("div", "flow");
+    [["Legal text", "Statutes, regulations, orders and court remedies in force in " + DJ_DATE + "."],
+     ["Three factors", "Existence, Scope and Enforceability, each scored 0, ½ or 1."],
+     ["Category score", "The lowest of the three factors."],
+     ["Dimension score", "The mean of the category scores in the dimension."],
+     ["Index", "The mean of the " + words(nD) + " dimension scores."]].forEach(function (x) {
+      flow.appendChild(add(el("div", "st"), el("b", null, x[0]), x[1]));
+    });
+    w.appendChild(flow);
+
+    // A worked example from the data: the first Japanese category whose factors differ, then Japan's dimension and index.
+    var exCode = "JP", exM = D.mechanisms.filter(function (m) { var c = cellOf(m.id, exCode); return c.binding && c.binding.length < 3; })[0];
+    if (exM) {
+      var c = cellOf(exM.id, exCode), dm = D.mechanisms.filter(function (m) { return m.dimension === exM.dimension; });
+      var ex = el("div", "example");
+      ex.appendChild(el("p", null, "Worked example, read from the database: " + jurName[exCode] + ", category " + exM.id + " (" + exM.name + ")."));
+      var ol = el("ol");
+      ol.appendChild(el("li", null, "Existence " + c.existence + ", Scope " + c.scope + ", Enforceability " + c.enforceability +
+        " → category score min(" + c.existence + ", " + c.scope + ", " + c.enforceability + ") = " + c.score + ". The binding factor is " + c.binding.join(" and ") + "."));
+      ol.appendChild(el("li", null, exM.dimension + " for " + jurName[exCode] + " = mean(" + dm.map(function (m) { return cellOf(m.id, exCode).score; }).join(", ") +
+        ") = " + num(val(exCode, exM.dimension)) + "."));
+      ol.appendChild(el("li", null, "Index for " + jurName[exCode] + " = mean(" + DIMS.map(function (d) { return num(val(exCode, d)); }).join(", ") + ") = " + num(val(exCode, "overall")) + "."));
+      ex.appendChild(ol);
+      w.appendChild(ex);
+    }
+    w.appendChild(aiP("The lowest factor sets the score because the three factors complement each other: a rule that reaches every firm but cannot be enforced " +
+      "protects little, and strong enforcement cannot make up for a rule that does not exist.", "prose"));
+    s.appendChild(w);
+    app.appendChild(s);
+
+    var s2 = section("alt"), w2 = el("div", "wrap");
+    head(w2, null, "Four dimensions, " + words(nM) + " categories");
+    var t = el("table", "plain"), hr = el("tr");
+    ["Dimension", "Question it answers", "De Jure obligation category", "De Facto indicator"].forEach(function (x) { hr.appendChild(el("th", null, x)); });
+    t.appendChild(hr);
+    D.dimensions.forEach(function (d) {
+      var ms = D.mechanisms.filter(function (m) { return m.dimension === d.id; });
+      ms.forEach(function (m, i) {
+        var tr = el("tr");
+        if (!i) {
+          var td = el("td", null, d.id + " " + d.name), tq = el("td", "small", ((D.paper.dimensionQuestions || {})[d.id] || {}).question || "");
+          td.rowSpan = tq.rowSpan = ms.length;
+          add(tr, td, tq);
+        }
+        var tc = el("td");
+        add(tc, el("strong", null, m.id + ". " + m.name), m.description ? el("div", "small muted", m.description) : null);
+        add(tr, tc, el("td", "small", m.code + " " + m.indicator));
+        t.appendChild(tr);
+      });
+    });
+    w2.appendChild(add(el("div", "table-scroll"), t));
+    w2.appendChild(el("p", "small muted", "Questions are quoted from the working paper; category names, descriptions and indicators from the project database."));
+    s2.appendChild(w2);
+    app.appendChild(s2);
+
+    var s3 = section(), w3 = el("div", "wrap");
+    head(w3, null, "The De Facto layer");
+    w3.appendChild(aiP("A De Facto indicator is either scored 0, ½ or 1, or left out of the denominator. Not Applicable means the mechanism does not operate in the market; " +
+      "Missing means the evidence was too thin to score. A dimension is the mean of the indicators that could be scored, so an evidence gap does not count as a zero.", "prose"));
+    var cs = el("table", "plain");
+    Object.keys(D.paper.codingStates || {}).forEach(function (k) { cs.appendChild(add(el("tr"), el("th", null, k), el("td", null, D.paper.codingStates[k]))); });
+    w3.appendChild(cs);
+    w3.appendChild(el("h3", "pane-title", "Confidence"));
+    var cf = el("table", "plain");
+    ["High", "Moderate", "Low"].forEach(function (k) { if (D.paper.confidenceLevels[k]) cf.appendChild(add(el("tr"), el("th", null, k), el("td", null, D.paper.confidenceLevels[k]))); });
+    w3.appendChild(cf);
+    if (D.paper.confidenceLevels.note) w3.appendChild(el("p", "small muted", D.paper.confidenceLevels.note + " (working paper)"));
+    w3.appendChild(el("h3", "pane-title", "Effective Contestability"));
+    var et = el("table", "plain");
+    et.appendChild(add(el("tr"), el("th", null, "Specification"), el("th", null, "Formula"), el("th", null, "Use")));
+    (D.paper.effectiveSpecs || []).forEach(function (x) { et.appendChild(add(el("tr"), el("td", null, pretty(x.id) + " " + x.eq), el("td", "mono", x.formula), el("td", "small", x.use))); });
+    w3.appendChild(et);
+    var rr = D.paper.reportingRequirements || {};
+    if (rr.effectiveTogether) w3.appendChild(el("p", "small muted", "“" + rr.effectiveTogether + "” (" + rr.source + ")"));
+    s3.appendChild(w3);
+    app.appendChild(s3);
+
+    var s4 = section("alt"), w4 = el("div", "wrap");
+    head(w4, null, "Legal forms");
+    w4.appendChild(aiP("Each De Jure score also records the form of the instrument it rests on. The form is a benchmark for coding; the legal text decides the score.", "prose"));
+    var lf = el("table", "plain");
+    lf.appendChild(add(el("tr"), el("th", null, "Form"), el("th", null, "Definition"), el("th", null, "Typical factor treatment")));
+    D.legalForms.forEach(function (f) {
+      lf.appendChild(add(el("tr"), el("td", "mono", f.code), add(el("td", "small"), el("strong", null, f.name), el("div", null, f.definition)), el("td", "small muted", f.signature)));
+    });
+    w4.appendChild(add(el("div", "table-scroll"), lf));
+    w4.appendChild(add(el("p"), extLink(APPENDIX, "Read the complete rules in the online appendix")));
+    s4.appendChild(w4);
+    app.appendChild(s4);
+  }
+
+  /* ========================================================== DATA */
+  var DATA_TAB = "jur";
+  function pageData(app) {
+    document.title = "Data · The Contestability Index";
+    var s = section(), w = el("div", "wrap");
+    head(w, "Data", "Every score as a table",
+      aiP(["Each table is read from the project database when the page opens. Click a column heading to sort, and download any table as CSV. The whole database is one ",
+           link(D.meta.dbUrl, "SQLite file"), "; the ", extLink(APPENDIX + "database.html", "online appendix"), " lets you browse every table in it."], "sec-intro"));
+    var tabs = el("div", "tabs-row"), body = el("div");
+    var TABS = [["jur", "De Jure: jurisdictions"], ["cat", "De Jure: categories"], ["mkt", "Markets"], ["eff", "Effective Contestability"], ["paper", "Differences from the paper"]];
+    var tb = {};
+    TABS.forEach(function (t) {
+      var b = el("button", null, t[1]);
+      b.type = "button";
+      b.setAttribute("role", "tab");
+      b.addEventListener("click", function () { DATA_TAB = t[0]; draw(); });
+      tb[t[0]] = b;
+      tabs.appendChild(b);
+    });
+    add(w, tabs, body);
+    s.appendChild(w);
+    app.appendChild(s);
+    function draw() {
+      Object.keys(tb).forEach(function (k) { tb[k].setAttribute("aria-selected", k === DATA_TAB ? "true" : "false"); });
+      body.textContent = "";
+      ({ jur: dataJur, cat: dataCat, mkt: dataMkt, eff: dataEff, paper: dataPaper })[DATA_TAB](body);
+    }
+    draw();
+  }
+  function dataJur(host) {
+    var rows = CODES.map(function (c) { var n = counts(c); return { c: c, n: n }; });
+    var cols = [{ label: "Jurisdiction", get: function (r) { return jurName[r.c]; }, fmt: function (v, r) { return link("#/jurisdiction/" + r.c, v); } },
+                { label: "Rank", num: true, get: function (r) { return rankOf(r.c, "overall"); } },
+                { label: "Index", score: true, get: function (r) { return val(r.c, "overall"); } }]
+      .concat(DIMS.map(function (d) { return { label: d, score: true, get: function (r) { return val(r.c, d); } }; }))
+      .concat([{ label: "Scored 1", num: true, get: function (r) { return r.n.full; } }, { label: "Scored ½", num: true, get: function (r) { return r.n.part; } },
+               { label: "Scored 0", num: true, get: function (r) { return r.n.none; } }]);
+    host.appendChild(add(el("div", "toolbar"), el("p", "small muted", "De Jure, " + DJ_DATE + ". " + nJ + " jurisdictions."),
+      csvButton("Download CSV", function () {
+        csvDownload("contestability_dejure_jurisdictions.csv", ["code", "jurisdiction", "rank", "index"].concat(DIMS, ["n_full", "n_partial", "n_zero"]),
+          rows.map(function (r) { return [r.c, jurName[r.c], rankOf(r.c, "overall"), val(r.c, "overall")].concat(DIMS.map(function (d) { return val(r.c, d); }), [r.n.full, r.n.part, r.n.none]); }));
+      })));
+    host.appendChild(dataTable(cols, rows));
+  }
+  function dataCat(host) {
+    var all = [];
+    CODES.forEach(function (c) { D.mechanisms.forEach(function (m) { all.push({ c: c, m: m, x: cellOf(m.id, c) }); }); });
+    var fj = "", fd = "";
+    var bar = el("div", "toolbar"), l = el("div", "ctrl-left"), out = el("div");
+    var sj = el("select", "pselect");
+    sj.appendChild(new Option("All jurisdictions", ""));
+    CODES.forEach(function (c) { sj.appendChild(new Option(jurName[c], c)); });
+    var sd = el("select", "pselect");
+    sd.appendChild(new Option("All dimensions", ""));
+    DIMS.forEach(function (d) { sd.appendChild(new Option(d + " " + DIM_SHORT[d], d)); });
+    sj.addEventListener("change", function () { fj = sj.value; draw(); });
+    sd.addEventListener("change", function () { fd = sd.value; draw(); });
+    add(l, sj, sd);
+    function rows() { return all.filter(function (r) { return (!fj || r.c === fj) && (!fd || r.m.dimension === fd); }); }
+    add(bar, l, csvButton("Download CSV (filtered)", function () {
+      csvDownload("contestability_dejure_categories.csv",
+        ["jurisdiction", "category_id", "category", "dimension", "score", "existence", "scope", "enforceability", "legal_form", "instrument_basis", "evidence_date"],
+        rows().map(function (r) { return [r.c, r.m.id, r.m.name, r.m.dimension, r.x.score, r.x.existence, r.x.scope, r.x.enforceability, r.x.legal_form, r.x.instrument_basis, r.x.evidence_date]; }));
+    }));
+    add(host, bar, out);
+    var cols = [{ label: "Jurisdiction", get: function (r) { return r.c; } },
+                { label: "#", num: true, get: function (r) { return r.m.id; } },
+                { label: "Category", get: function (r) { return r.m.name; }, fmt: function (v, r) {
+                  var b = el("button", "linkish", v);
+                  b.type = "button";
+                  b.style.cssText = "background:none;border:0;padding:0;color:var(--purple-deep);cursor:pointer;text-align:left;font:inherit";
+                  b.className = "open-doc";
+                  b.addEventListener("click", function () { matrixOrder = CODES; openCell(r.m.id, r.c); });
+                  return b;
+                } },
+                { label: "Dim.", get: function (r) { return r.m.dimension; } },
+                { label: "Score", score: true, get: function (r) { return r.x.score; }, fmt: function (v) { return glyph(v); } },
+                { label: "E", score: true, get: function (r) { return r.x.existence; }, fmt: function (v) { return glyph(v); } },
+                { label: "S", score: true, get: function (r) { return r.x.scope; }, fmt: function (v) { return glyph(v); } },
+                { label: "Enf", score: true, get: function (r) { return r.x.enforceability; }, fmt: function (v) { return glyph(v); } },
+                { label: "Legal form", get: function (r) { return pretty(r.x.legal_form); } },
+                { label: "Instrument", get: function (r) { return r.x.instrument_basis; } }];
+    function draw() { out.textContent = ""; out.appendChild(dataTable(cols, rows())); }
+    draw();
+  }
+  function dataMkt(host) {
+    var rows = [];
+    ["de_jure", "de_facto"].forEach(function (layer) {
+      UNITS.forEach(function (u) {
+        ["baseline", "current"].forEach(function (p) {
+          var x = mIdx(layer, u, p);
+          if (x) rows.push({ layer: layer, u: u, p: p, x: x });
+        });
+      });
+    });
+    var cols = [{ label: "Pair", get: function (r) { return unitById[r.u].name; } },
+                { label: "Layer", get: function (r) { return r.layer === "de_jure" ? "De Jure (market)" : "De Facto"; } },
+                { label: "Observed", get: function (r) { return r.x.observed || ""; }, fmt: function (v) { return month(v); } },
+                { label: "Index", score: true, get: function (r) { return r.x.index; } }]
+      .concat(DIMS.map(function (d) { return { label: d, score: true, get: function (r) { return r.x.dims[d] ? r.x.dims[d].score : null; } }; }))
+      .concat([{ label: "Scored / applicable", get: function (r) { return r.x.nScored + " / " + r.x.nApplicable; } }]);
+    host.appendChild(add(el("div", "toolbar"), el("p", "small muted", "Three EU gatekeeper–market pairs. Google Play has no " + DF_BASE + " De Jure record."),
+      csvButton("Download CSV", function () {
+        csvDownload("contestability_markets.csv", ["unit", "layer", "period", "observed", "index"].concat(DIMS, ["n_scored", "n_applicable"]),
+          rows.map(function (r) { return [r.u, r.layer, r.p, r.x.observed, r.x.index].concat(DIMS.map(function (d) { return r.x.dims[d] ? r.x.dims[d].score : ""; }), [r.x.nScored, r.x.nApplicable]); }));
+      })));
+    host.appendChild(dataTable(cols, rows));
+  }
+  function dataEff(host) {
+    var rows = D.effective.slice();
+    var cols = [{ label: "Pair", get: function (r) { return unitById[r.unit].name; } },
+                { label: "Observation", get: function (r) { return r.period; }, fmt: function (v) { return v === "baseline" ? DF_BASE : "Latest"; } },
+                { label: "De Jure", score: true, get: function (r) { return r.deJure; } }, { label: "De Facto", score: true, get: function (r) { return r.deFacto; } },
+                { label: "Multiplicative (5)", score: true, get: function (r) { return r.multiplicative; } }, { label: "Additive (6)", score: true, get: function (r) { return r.arithmetic; } },
+                { label: "Bottleneck (7)", score: true, get: function (r) { return r.bottleneck; } }, { label: "Gap (8)", num: true, get: function (r) { return r.gap; }, fmt: function (v) { return num(v); } }];
+    host.appendChild(add(el("div", "toolbar"), el("p", "small muted", "λ = " + D.meta.lambda + " in the additive specification. Equation numbers are the paper's."),
+      csvButton("Download CSV", function () {
+        csvDownload("contestability_effective.csv", ["unit", "period", "de_jure", "de_facto", "ec_multiplicative", "ec_arithmetic", "ec_bottleneck", "implementation_gap"],
+          rows.map(function (r) { return [r.unit, r.period, r.deJure, r.deFacto, r.multiplicative, r.arithmetic, r.bottleneck, r.gap]; }));
+      })));
+    host.appendChild(dataTable(cols, rows));
+  }
+  function dataPaper(host) {
+    host.appendChild(aiP("The working paper (July 2026) was compiled from an earlier state of the database. The paper's Table 3 covers fifteen obligation categories; " +
+      "the database covers " + words(nM) + " and includes corrections made afterwards. The lists below are computed by comparing the two when the page opens.", "prose"));
+    var disc = D.paper.discrepancies || [];
+    var t = el("table", "plain");
+    t.appendChild(add(el("tr"), el("th", null, "Jurisdiction"), el("th", null, "Site against paper"), el("th", null, "Why")));
+    disc.forEach(function (d) { t.appendChild(add(el("tr"), el("td", null, d.name), el("td", "small", d.detail.join("; ")), el("td", "small", d.whyShort || d.why))); });
+    host.appendChild(el("h3", "pane-title", "De Jure: " + disc.length + " of " + nJ + " jurisdictions differ"));
+    host.appendChild(add(el("div", "table-scroll"), t));
     var cmp = D.paper.deFactoCompare || [];
-    var dfDiffer = cmp.filter(function (c) { return !c.same; });
-    var box2 = el("div", "callout" + (dfDiffer.length ? " warn-callout" : ""));
-    box2.appendChild(el("strong", null, "De facto: " + (dfDiffer.length
-      ? dfDiffer.length + " of " + cmp.length + " observations differ from the paper's Table 4. "
-      : "the figures reproduce the paper's Table 4. ")));
-    box2.appendChild(document.createTextNode("Both use the same sixteen indicators and the same denominator rule. " +
-      (dfDiffer.length ? "The differing observations are " + dfDiffer.map(function (c) { return c.name; }).join(" and ") +
-       "; the published figures are listed on the de facto page next to the current ones." : "")));
-    h.appendChild(box2);
+    host.appendChild(el("h3", "pane-title", "De Facto: " + cmp.filter(function (c) { return !c.same; }).length + " of " + cmp.length + " pairs differ"));
+    var t2 = el("table", "plain");
+    t2.appendChild(add(el("tr"), el("th", null, "Pair"), el("th", null, "Paper"), el("th", null, "Database"), el("th", null, "")));
+    cmp.forEach(function (c) {
+      t2.appendChild(add(el("tr"), el("td", null, c.name),
+        el("td", "small", num(c.paper.baseline) + " → " + num(c.paper.later) + " (" + c.paper.scored + " of " + c.paper.applicable + " scored)"),
+        el("td", "small", num(c.ours.pre) + " → " + num(c.ours.post) + " (" + c.ours.scored + " of " + c.ours.applicable + " scored)"),
+        el("td", "small", c.same ? "identical" : "differs")));
+    });
+    host.appendChild(add(el("div", "table-scroll"), t2));
+  }
 
-    head("Limitations");
-    var lim = el("ul");
-    [
-      "Coverage is limited. Nine legal systems are assessed for the de jure layer, and the de facto work covers a small number of gatekeeper-market observations in the European Union alone.",
-      "The pre and post comparisons are descriptive. The index supplies measurement infrastructure for causal analysis; it does not itself provide an identification strategy.",
-      "Scores are least comparable across markets. A 0.5 in search and a 0.5 in app distribution need not describe equivalent competitive conditions.",
-      "Assigning 0, 0.5 or 1 involves judgment. Systematic inter-coder reliability has not yet been evaluated; independent double-coding and agreement statistics are planned.",
-      "The de facto layer rests on heterogeneous public evidence, and its weakest dimension is technical interoperability and data access.",
-      "Equal weighting is a transparent baseline, not a claim that every mechanism matters equally in every market.",
-      "The de jure layer is a snapshot. Instruments announced but not yet in force score zero on Existence and are flagged rather than credited."
-    ].forEach(function (t) { lim.appendChild(el("li", null, t)); });
-    h.appendChild(lim);
+  /* ========================================================== LEGAL DOCUMENTS */
+  function pageLegal(app, code) {
+    document.title = "Legal documents · The Contestability Index";
+    code = jurByCode[code] ? code : "EU";
+    var s = section(), w = el("div", "wrap");
+    var nExtracts = Object.keys(D.cells).reduce(function (n, k) { return n + (D.cells[k].extracts || []).length; }, 0);
+    var nInst = Object.keys(D.instruments).reduce(function (n, k) { return n + D.instruments[k].length; }, 0);
+    head(w, "Legal documents", "The law behind every score",
+      aiP("The instruments behind each De Jure score, with links to the official text. The database holds " + nInst + " instruments, the full text of " +
+          D.documents.length + " documents and " + nExtracts + " verbatim provisions, each attached to the category and jurisdiction it supports.", "sec-intro"));
+    var chips = el("div", "chips");
+    CODES.forEach(function (c) {
+      var b = el("button", "chip", jurName[c]);
+      b.type = "button";
+      b.setAttribute("aria-pressed", c === code ? "true" : "false");
+      b.addEventListener("click", function () { go("#/legal/" + c); });
+      chips.appendChild(b);
+    });
+    w.appendChild(chips);
+    var j = jurByCode[code];
+    w.appendChild(el("h3", "sec-head", j.name));
+    if (j.enforcementNote) w.appendChild(el("p", "sec-intro", j.enforcementNote));
 
-    head("Reproducing these numbers");
-    var rp = el("p");
-    rp.appendChild(document.createTextNode("Every figure on this site is computed in your browser from the project " +
-      "database, which you can download: "));
-    rp.appendChild(dbLink("contestability.db"));
-    rp.appendChild(document.createTextNode(" (SQLite). Each score, de jure or de facto, is one row of the table " +
-      "assessments, with the same columns in both layers; dimension scores, indices and the four Effective " +
-      "Contestability specifications are the views v_dimension_scores, v_index and v_effective, so nothing is " +
-      "stored twice. The database is built from the coding sheets by a script that stops if any score falls " +
-      "outside the three-point grid, if a de jure score is not the minimum of its three factors, or if a count " +
-      "is off. For example:"));
-    h.appendChild(rp);
-    h.appendChild(el("pre", "mono small", "select unit_id, period, de_jure, de_facto,\n" +
-      "       ec_multiplicative, ec_arithmetic, ec_bottleneck, implementation_gap\n" +
-      "from v_effective;"));
-  })();
+    var inst = D.instruments[code] || [];
+    w.appendChild(el("h3", "pane-title", "Instruments on record (" + inst.length + ")"));
+    var t = el("table", "plain");
+    t.appendChild(add(el("tr"), el("th", null, "Instrument"), el("th", null, "Citation"), el("th", null, "Status"), el("th", null, "Official source")));
+    inst.forEach(function (i) {
+      t.appendChild(add(el("tr"), add(el("td"), el("strong", null, i.name), i.pipeline ? el("span", "badge warn", "Not in force") : null),
+        el("td", "small", i.citation || "—"), el("td", "small", i.status || "—"),
+        add(el("td", "small"), i.url ? extLink(i.url, i.sourceLabel || domain(i.url)) : "—")));
+    });
+    w.appendChild(add(el("div", "table-scroll"), t));
 
-  /* ------------------------------------------------------------ boot */
-  var h0 = location.hash.slice(1);
-  if (h0 && $("#view-" + h0)) showTab(h0);
+    w.appendChild(el("h3", "pane-title", "Legal basis by obligation category"));
+    var basis = {};
+    (D.legalBasis[code] || []).forEach(function (b) { (basis[b.mechanism] = basis[b.mechanism] || []).push(b.basis); });
+    var t2 = el("table", "plain");
+    t2.appendChild(add(el("tr"), el("th", null, "Category"), el("th", null, "Score"), el("th", null, "Article relied on"), el("th", null, "")));
+    D.mechanisms.forEach(function (m) {
+      var c = cellOf(m.id, code), b = el("button", "open-doc", "Details");
+      b.type = "button";
+      b.style.cssText = "background:none;border:1px solid var(--purple);color:var(--purple);border-radius:3px;padding:1px 8px;font-size:.76rem;font-weight:700;cursor:pointer";
+      b.addEventListener("click", function () { matrixOrder = CODES; openCell(m.id, code); });
+      t2.appendChild(add(el("tr"), el("td", null, m.id + ". " + m.name), paint(el("td", "sc", glyph(c.score)), c.score),
+        el("td", "small", (basis[m.id] || []).join("; ") || c.instrument_basis || "—"), add(el("td"), b)));
+    });
+    w.appendChild(add(el("div", "table-scroll"), t2));
+
+    var docs = D.documents.filter(function (d) { return d.jurisdiction === code; });
+    w.appendChild(el("h3", "pane-title", "Full texts in the database (" + docs.length + ")"));
+    if (docs.length) {
+      var ul = el("ul", "link-list");
+      docs.forEach(function (d) {
+        var b = el("button", "open-doc", d.name || d.stem);
+        b.type = "button";
+        b.style.cssText = "background:none;border:0;padding:0;color:var(--purple-deep);text-decoration:underline;cursor:pointer;font:inherit;text-align:left";
+        b.addEventListener("click", function () { openDoc(d); });
+        ul.appendChild(add(el("li"), b, el("span", "muted small", " · " + [d.language, Math.round(d.chars / 1000) + "k characters"].filter(Boolean).join(" · "))));
+      });
+      w.appendChild(ul);
+    } else w.appendChild(el("p", "muted", "None on file."));
+
+    var ex = [];
+    D.mechanisms.forEach(function (m) { (cellOf(m.id, code).extracts || []).forEach(function (x) { ex.push({ m: m, x: x }); }); });
+    w.appendChild(el("h3", "pane-title", "Verbatim provisions (" + ex.length + ")"));
+    ex.forEach(function (e) {
+      var d = el("details", "fold"), sm = el("summary");
+      add(sm, e.m.id + ". " + e.m.name, el("span", "meta", e.x.instrument));
+      d.appendChild(sm);
+      var body = el("div", "body");
+      if (e.x.summary) body.appendChild(el("p", "small", e.x.summary));
+      if (e.x.text) body.appendChild(el("blockquote", null, e.x.text));
+      if (e.x.translation) { body.appendChild(el("p", "small muted", "English translation")); body.appendChild(el("blockquote", "translation", e.x.translation)); }
+      d.appendChild(body);
+      w.appendChild(d);
+    });
+    if (!ex.length) w.appendChild(el("p", "muted", "None on file."));
+    s.appendChild(w);
+    app.appendChild(s);
+  }
+
+  /* ========================================================== ABOUT */
+  function pageAbout(app) {
+    document.title = "About · The Contestability Index";
+    var s = section(), w = el("div", "wrap prose");
+    head(w, "About", "About the index");
+    w.appendChild(aiP("The Contestability Index measures the opportunity for incumbent positions in digital markets to be challenged, rather than market structure " +
+      "or outcomes. It is developed in the working paper Beyond Market Concentration: Measuring Contestability in Digital Markets by Zhiyang Cheng, Tracy Xu " +
+      "and Amr Yakout (July 2026)."));
+    w.appendChild(aiP("The project is affiliated with the Knight-Georgetown Institute (KGI) at Georgetown University."));
+    w.appendChild(aiP("The De Jure layer covers " + words(nJ) + " jurisdictions: " + theNames(CODES) +
+      ". The De Facto layer covers " + words(nU) + " gatekeeper–market pairs in the European Union. Both use the same " + words(nM) + " mechanisms in " + words(nD) + " dimensions."));
+    w.appendChild(el("h3", null, "How to cite"));
+    w.appendChild(aiP("Cheng, Zhiyang, Tracy Xu and Amr Yakout. 2026. “Beyond Market Concentration: Measuring Contestability in Digital Markets.” Working paper, July 2026."));
+    w.appendChild(el("h3", null, "Status of these figures"));
+    w.appendChild(aiP(["The site is a preliminary preview. Its figures come from the project database built " + D.meta.built + " and may change. Where they differ from the working paper, ",
+      link("#/data", "the Data page"), " lists each difference and its reason."]));
+    w.appendChild(el("h3", null, "How the site works"));
+    w.appendChild(aiP("The site is a set of static files. When a page opens, your browser downloads the project database (SQLite, " +
+      (D.meta.dbBytes / 1e6).toFixed(1) + " MB) and computes every figure from it with sql.js, so the numbers on the page and the downloadable file are the same."));
+    w.appendChild(add(el("p"), extLink(APPENDIX, "Online appendix"), " · ", link(D.meta.dbUrl, "Download the database")));
+    s.appendChild(w);
+    app.appendChild(s);
+  }
+
+  /* ------------------------------------------------------------ router */
+  var LEGACY = { overview: "#/", dejure: "#/data", defacto: "#/jurisdiction/EU", markets: "#/jurisdiction/EU", methodology: "#/scoring" };
+  function render() {
+    var h = location.hash.replace(/^#/, "");
+    if (LEGACY[h]) { location.replace(LEGACY[h]); return; }
+    var parts = h.replace(/^\//, "").split("/"), page = parts[0] || "explore", arg = (parts[1] || "").toUpperCase();
+    closePanel(true);
+    ttHide();
+    var app = $("#app");
+    app.textContent = "";
+    document.title = "The Contestability Index";
+    var navKey = page === "jurisdiction" ? "jurisdictions" : page;
+    Array.prototype.forEach.call(document.querySelectorAll("[data-nav]"), function (a) {
+      if (a.dataset.nav === navKey || (navKey === "explore" && a.dataset.nav === "explore")) a.setAttribute("aria-current", "page");
+      else a.removeAttribute("aria-current");
+    });
+    links.classList.remove("open");
+    menuBtn.setAttribute("aria-expanded", "false");
+    if (page === "jurisdiction" && jurByCode[arg]) pageJurisdiction(app, arg);
+    else if (page === "jurisdictions" || page === "jurisdiction") pageJurisdictions(app);
+    else if (page === "cases") pageCases(app);
+    else if (page === "scoring") pageScoring(app);
+    else if (page === "data") pageData(app);
+    else if (page === "legal") pageLegal(app, arg);
+    else if (page === "about") pageAbout(app);
+    else pageExplore(app);
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener("hashchange", render);
+  render();
 };

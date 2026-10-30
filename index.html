@@ -4,174 +4,68 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Contestability Index</title>
-<meta name="description" content="Sixteen pro-contestability obligation categories scored across nine jurisdictions, with a de facto pilot measuring observed market conditions before and after the Digital Markets Act.">
+<meta name="description" content="How far do the laws require digital markets to be open to rivals, and how far are the markets actually open? Sixteen obligation categories scored in the law of nine jurisdictions, and observed conditions in three EU gatekeeper–market pairs.">
 <!-- Preview: keep search engines out until the figures are final. Remove this line at launch. -->
 <meta name="robots" content="noindex, nofollow">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%232a78d6'/><rect x='3' y='8' width='2.5' height='5' fill='%23fff'/><rect x='6.75' y='5' width='2.5' height='8' fill='%23fff'/><rect x='10.5' y='3' width='2.5' height='10' fill='%23fff'/></svg>">
-<link rel="stylesheet" href="css/style.css?v=cdfed137">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23151515'/><rect x='3' y='8' width='2.5' height='5' fill='%23fff'/><rect x='6.75' y='5' width='2.5' height='8' fill='%23fff'/><rect x='10.5' y='3' width='2.5' height='10' fill='%23fff'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- KGI sets accents in Adobe Caslon Pro (a licensed Typekit font); Libre Caslon Text is the open substitute. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;1,400&display=swap">
+<link rel="stylesheet" href="css/style.css?v=860640c3">
 </head>
 <body>
+<a class="skip" href="#app">Skip to content</a>
 
-<header class="site">
-  <div class="wrap">
-    <h1>The Contestability Index</h1>
-    <p class="tagline">How contestable are digital platform markets? Sixteen pro-contestability
-      obligation categories, scored on the law as written across nine jurisdictions, and a de facto
-      pilot measuring what actually changed in two European markets after the Digital Markets Act.</p>
-    <p class="metaline" id="metaline"></p>
-    <p class="ribbon" id="ribbon" hidden><span aria-hidden="true">&#9888;</span><span id="ribbon-text"></span></p>
-    <nav class="tabs" role="tablist" aria-label="Sections">
-      <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
-      <button role="tab" data-tab="dejure" aria-selected="false">De Jure Explorer</button>
-      <button role="tab" data-tab="defacto" aria-selected="false">De Facto Pilot</button>
-      <button role="tab" data-tab="markets" aria-selected="false">Markets</button>
-      <button role="tab" data-tab="methodology" aria-selected="false">Methodology</button>
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#/" aria-label="The Contestability Index, home">
+      <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+        <rect x="1" y="1" width="38" height="38" rx="2" fill="#151515"/>
+        <rect x="10" y="21" width="5" height="10" rx="1" fill="#fff"/>
+        <rect x="17.5" y="15" width="5" height="16" rx="1" fill="#fff"/>
+        <rect x="25" y="9" width="5" height="22" rx="1" fill="#fff"/>
+      </svg>
+      <span class="brand-text">The Contestability<br>Index</span>
+    </a>
+    <nav class="toplinks" aria-label="Project links">
+      <a class="btn btn-outline" href="https://zycheng114514.github.io/contestability-appendix/" target="_blank" rel="noopener noreferrer">Online Appendix</a>
+      <a class="btn btn-fill" id="download-db" href="data/contestability.db" download>Download Data</a>
     </nav>
   </div>
 </header>
 
-<main class="wrap">
-  <p class="load-status" id="load-status" hidden></p>
-
-  <!-- ======================================================= overview -->
-  <section id="view-overview" role="tabpanel" aria-label="Overview">
-
-    <div class="card headline">
-      <h2>Law on the books is not the same as a contestable market</h2>
-      <p class="sub">The European Union mandates every one of the sixteen obligation categories in
-        full: its de jure score is the maximum the index can award. Yet in the two European markets
-        where we measured observed conditions, contestability after the Digital Markets Act remains
-        far below what the law requires. The distance between the two bars is the finding.</p>
-      <div id="gap"></div>
-      <p class="axis-note">De jure = the market-level legal framework in the European Union, June 2026.
-        De facto = observed market conditions for that gatekeeper–market pair, July 2026.
-        The paper gives four ways of relating the two layers; the table under the bars reports all four,
-        at the December 2023 baseline and at the latest observation.</p>
+<nav class="subnav" aria-label="Sections">
+  <div class="wrap subnav-in">
+    <a class="subnav-brand" href="#/">Contestability Index <span>2026</span></a>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="subnav-links">Menu</button>
+    <div class="subnav-links" id="subnav-links">
+      <a href="#/" data-nav="explore">Explore</a>
+      <a href="#/jurisdictions" data-nav="jurisdictions">Jurisdictions</a>
+      <a href="#/cases" data-nav="cases">Case Studies</a>
+      <a href="#/scoring" data-nav="scoring">Scoring Rules</a>
+      <a href="#/data" data-nav="data">Data</a>
+      <a href="#/legal" data-nav="legal">Legal Documents</a>
+      <a href="#/about" data-nav="about">About</a>
     </div>
+  </div>
+</nav>
+<p class="prelim"><strong>Preliminary.</strong> The figures on this site may still change. Paragraphs marked [AI generated] are drafts for the team to review.</p>
 
-    <div class="card">
-      <h2>Where contestability obligations exist</h2>
-      <p class="sub small">Nine jurisdictions are assessed. Everywhere else is unassessed, which is
-        not the same as a score of zero. Click a shaded area to open its record.</p>
-      <div id="map"></div>
-      <div id="map-legend" class="map-legend"></div>
-      <p class="axis-note" id="map-note"></p>
-    </div>
-
-    <div class="card">
-      <h2>Overall de jure index by jurisdiction</h2>
-      <p class="sub small">Equal-weighted mean of the four dimension scores. Click a jurisdiction to
-        open its category-level detail.</p>
-      <div class="bar-plot" id="ranking"></div>
-      <p class="axis-note">0 = no contestability obligations &nbsp;&middot;&nbsp; 1 = fully mandated across all sixteen categories</p>
-    </div>
-
-    <div class="card">
-      <h2>Dimension breakdown</h2>
-      <p class="sub small">Mean of the category scores in each dimension. Jurisdictions appear in
-        overall-ranking order in every panel, so a panel that reorders the eye is a real difference.</p>
-      <div class="dim-grid" id="dimgrid"></div>
-    </div>
-  </section>
-
-  <!-- ======================================================= de jure -->
-  <section id="view-dejure" role="tabpanel" aria-label="De Jure Explorer" hidden>
-    <p class="lead">All <span id="dj-count"></span> assessments. Every cell is the minimum of
-      Existence, Scope and Enforceability, so a category scores well only where a rule exists,
-      reaches the whole market, and can be enforced. Click any cell for the three factor scores,
-      the scoring rationale, the governing instrument and, where we hold it, the verbatim legal text.</p>
-
-    <div class="card">
-      <div class="filters" id="filters"></div>
-      <div id="profile" class="profile" hidden></div>
-      <div class="heat-wrap"><div id="heatmap"></div></div>
-      <div class="legend" id="legend"></div>
-    </div>
-  </section>
-
-  <!-- ======================================================= de facto -->
-  <section id="view-defacto" role="tabpanel" aria-label="De Facto Pilot" hidden>
-    <p class="lead" id="df-note"></p>
-
-    <div class="callout scope-warning">
-      <strong>Read the scope before the scores.</strong> The de facto layer covers three gatekeeper–market
-      pairs in two European Union markets, observed at two points in time. It is not a nine-jurisdiction
-      measure, and nothing on this page should be compared directly with another jurisdiction's de jure score.
-    </div>
-
-    <div class="card">
-      <h2>Composite de facto contestability, before and after the DMA</h2>
-      <p class="sub small">Equal-weighted mean of the four dimension scores; each dimension score is the
-        mean of its scored indicators.</p>
-      <div id="df-tiles"></div>
-    </div>
-
-    <div class="card">
-      <h2>Dimension by dimension</h2>
-      <p class="sub small">One panel per dimension, all three pairs on the same scale. A steeper line
-        is a larger observed change between the pre-DMA baseline and the post-DMA observation.</p>
-      <div class="slope-grid" id="slopes"></div>
-    </div>
-
-    <div class="card">
-      <h2>Indicator evidence</h2>
-      <p class="sub small">Expand a row to read the evidence and scoring rationale, the confidence assigned
-        to the score and the sources. Missing and Not Applicable indicators are listed with the reason.</p>
-      <div class="dim-chips" id="df-dim-chips"></div>
-      <div id="df-detail"></div>
-    </div>
-
-    <div class="card">
-      <h2>The DMA obligations each dimension observes</h2>
-      <p class="sub small">The Digital Markets Act articles whose effects the indicators in each
-        dimension are designed to observe.</p>
-      <div id="obligation-map"></div>
-    </div>
-  </section>
-
-  <!-- ======================================================= markets -->
-  <section id="view-markets" role="tabpanel" aria-label="Markets" hidden>
-    <p class="lead">The jurisdiction layer asks what a legal regime mandates in general. The market
-      layer asks which instruments actually bite in a named market. A jurisdiction can score well
-      overall while leaving a specific market untouched.</p>
-
-    <div class="card">
-      <h2>Regime coverage by market</h2>
-      <p class="sub small">Eleven markets across nine jurisdictions. Colour shows the kind of regime
-        in force, not a score. Click a cell for the binding instruments and the firms they reach.</p>
-      <div class="heat-wrap"><div id="market-matrix"></div></div>
-      <div id="market-legend" class="legend"></div>
-    </div>
-
-    <div class="card" id="market-dj-card">
-      <h2>Market-level de jure scoring</h2>
-      <p class="sub small">Two European markets scored category by category in June 2026 and, for Google
-        Search and the Apple App Store, at the December 2023 baseline, with the governing provision and the
-        verbatim hook that makes it apply to that market. Google Play carries the app-distribution record,
-        because the same obligations bind both app stores.</p>
-      <div id="market-dj"></div>
-    </div>
-  </section>
-
-  <!-- ======================================================= methodology -->
-  <section id="view-methodology" role="tabpanel" aria-label="Methodology" hidden>
-    <div class="card prose" id="methodology"></div>
-  </section>
-
+<main id="app" tabindex="-1">
+  <p class="load-status" id="load-status">Loading the project database…</p>
 </main>
 
 <aside id="panel" class="panel" role="dialog" aria-modal="false" aria-label="Detail" hidden></aside>
 <div id="tooltip" class="tooltip" role="status" aria-live="polite" hidden></div>
 
 <footer class="site-footer">
-  <div class="wrap">
-    <p class="small muted" id="footer-note"></p>
-  </div>
+  <div class="wrap" id="footer"></div>
 </footer>
 
 <script src="js/world.js?v=02fec7aa"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
-<script src="js/app.js?v=09879108"></script>
-<script src="js/db.js?v=889da8db" data-db="data/contestability.db?v=80d1714e" data-paper="data/paper.json?v=13351502"></script>
+<script src="js/app.js?v=8f96b06e"></script>
+<script src="js/db.js?v=5e060d2b" data-db="data/contestability.db?v=80d1714e" data-paper="data/paper.json?v=13351502"></script>
 </body>
 </html>

@@ -1,12 +1,17 @@
 /* The Contestability Index — data layer.
-   Opens the project database (data/contestability.db, SQLite) in the browser with sql.js, reads every
-   figure the site shows from it, and hands the result to app.js as window.CI_DATA. Nothing on the site
-   is precomputed: dimension scores, indices and Effective Contestability come from the database's views.
-   The published figures used for comparison (data/paper.json) are transcribed from the paper. */
+   Opens the project database in the browser with sql.js, reads every figure the site shows from it, and hands
+   the result to app.js as window.CI_DATA. Nothing on the site is precomputed: dimension scores, indices and
+   Effective Contestability come from the database's views.
+   The pages load data/contestability_site.db: the project database without the legal full texts and without the
+   search index (the publish script checks that every other table and view returns the same rows). The full texts
+   are in data/legal_texts.db, fetched the first time a reader opens one. The whole database, data/contestability.db,
+   is the download. The published figures used for comparison (data/paper.json) are transcribed from the paper. */
 (function () {
   "use strict";
   var me = document.currentScript;
   var DB_URL = me.getAttribute("data-db");
+  var TEXTS_URL = me.getAttribute("data-texts");
+  var FULL_URL = me.getAttribute("data-full");
   var PAPER_URL = me.getAttribute("data-paper");
   var SQLJS = "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/";
 
@@ -146,10 +151,10 @@
     rows(db, "select * from mechanism_legal_basis order by jurisdiction, mechanism_id").forEach(function (r) {
       (legalBasis[r.jurisdiction] = legalBasis[r.jurisdiction] || []).push({ mechanism: r.mechanism_id, basis: r.article_basis });
     });
-    // Documents whose full text is in the database. The text itself is read on demand (some are 400 KB).
+    // Documents whose full text is on file. The text itself is in a second file, read on demand (some are 400 KB).
     var documents = rows(db, "select d.doc_id, d.jurisdiction, d.file_stem, d.instrument_name, d.language, " +
-                             "d.original_path, length(t.content) as chars from legal_documents d " +
-                             "left join document_texts t using (doc_id) order by d.jurisdiction, d.doc_id").map(function (r) {
+                             "d.original_path, t.chars from legal_documents d " +
+                             "left join document_text_sizes t using (doc_id) order by d.jurisdiction, d.doc_id").map(function (r) {
       return { id: r.doc_id, jurisdiction: r.jurisdiction, stem: r.file_stem, name: r.instrument_name || "",
                language: r.language || "", file: r.original_path || "", chars: r.chars || 0 };
     });
@@ -212,7 +217,8 @@
       meta: {
         built: info.built || "", evidenceDate: (periods["de_jure|jurisdiction|current"] || {}).observed || "",
         mechanismCount: mechanisms.length, jurisdictionCount: jurisdictions.length, totalCells: Object.keys(cells).length,
-        extractCount: extractCount, lambda: Number(info.effective_arithmetic_lambda || 0.5), dbUrl: DB_URL.split("?")[0]
+        extractCount: extractCount, lambda: Number(info.effective_arithmetic_lambda || 0.5), dbUrl: FULL_URL,
+        fullDbBytes: Number(info.full_db_bytes || 0), textsDbBytes: Number(info.texts_db_bytes || 0)
       },
       jurisdictions: jurisdictions, dimensions: dims, mechanisms: mechanisms, cells: cells, aggregates: aggregates,
       legalForms: legalForms, formOfLabel: formOfLabel, instruments: instruments, periods: periods,
@@ -224,7 +230,7 @@
         deJure: paper.deJure, deFacto: paper.deFacto, effectiveSpecs: paper.effectiveSpecifications,
         codingStates: paper.codingStates, dimensionQuestions: paper.dimensionQuestions,
         reportingRequirements: paper.reportingRequirements, handbook: paper.handbook,
-        confidenceLevels: paper.confidenceLevels, discrepancies: discrepancies, deFactoCompare: dfCompare
+        confidenceLevels: paper.confidenceLevels, manual: paper.manual || {}, discrepancies: discrepancies, deFactoCompare: dfCompare
       }
     };
   }
@@ -235,15 +241,31 @@
     fetch(DB_URL).then(function (r) { if (!r.ok) throw new Error("database: HTTP " + r.status); return r.arrayBuffer(); }),
     fetch(PAPER_URL).then(function (r) { if (!r.ok) throw new Error("paper figures: HTTP " + r.status); return r.json(); })
   ]).then(function (res) {
-    var db = new res[0].Database(new Uint8Array(res[1]));
+    var SQL = res[0], db = new SQL.Database(new Uint8Array(res[1]));
     window.CI_DB = db;  // the open database, for anyone who wants to query it from the console
     window.CI_DATA = build(db, res[2]);
     window.CI_DATA.meta.dbBytes = res[1].byteLength;
+    // The full text of one legal document. The texts file is fetched once, on the first request.
+    var texts = null;
+    window.CI_TEXT = function (docId) {
+      texts = texts || fetch(TEXTS_URL).then(function (r) {
+        if (!r.ok) throw new Error("legal texts: HTTP " + r.status);
+        return r.arrayBuffer();
+      }).then(function (buf) { return new SQL.Database(new Uint8Array(buf)); });
+      texts.catch(function () { texts = null; });  // a failed download can be retried
+      return texts.then(function (tdb) {
+        var st = tdb.prepare("select content from document_texts where doc_id = ?");
+        st.bind([Number(docId)]);
+        var text = st.step() ? st.get()[0] : "";
+        st.free();
+        return text;
+      });
+    };
     if (status) status.hidden = true;
     window.CI_BOOT();
   }).catch(function (e) {
     say("The project database could not be loaded (" + (e && e.message ? e.message : e) + "). " +
-        "This page reads data/contestability.db over HTTP, so it has to be served by a web server rather than opened as a file.");
+        "This page reads data/contestability_site.db over HTTP, so it has to be served by a web server rather than opened as a file.");
     if (window.console) console.error(e);
   });
 })();

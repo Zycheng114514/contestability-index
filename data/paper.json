@@ -264,5 +264,28 @@
       "Google Play / Android"
     ],
     "note": "The Handbook (sixteen obligation categories since 23 September 2026) agrees with this site on every de jure figure, including the United Kingdom. The paper’s published table covers fifteen categories and carries the earlier United Kingdom row."
+  },
+  "manual": {
+    "source": "Methodology Manual V3.2 (KGI format, version of 23 September 2026)",
+    "deFactoScale": {
+      "section": "V.C",
+      "0": "The mechanism is absent, prohibited, or obstructed to a degree that leaves no working path.",
+      "0.5": "A working path exists but remains subject to friction the gatekeeper imposes or maintains.",
+      "1": "The mechanism operates without gatekeeper-imposed friction.",
+      "Not Applicable": "Mechanism is outside of scope or parameter of market. Not included in scoring.",
+      "Missing": "Mechanism is within scope but evidence was not found. Not included in scoring with reason recorded."
+    },
+    "pilotLimitation": {
+      "section": "III.C.2",
+      "text": "Markets subject to intensive regulatory scrutiny are not representative of digital markets generally, and their documentation is extensive because they have been probed either by official regulatory bodies or by increased consumer scrutiny that produces a body of analytical commentary. Results from the pilot markets should not be read as indicative of contestability in markets where enforcement has been lighter and the evidence base is correspondingly more sparse."
+    },
+    "indexMeaning": {
+      "section": "V.D",
+      "text": "The 0.52 records how the specified contestability mechanisms operate as coded. It says nothing about Google's market power, the concentration of the search market, or its profitability."
+    },
+    "noJurisdictionDeFacto": {
+      "section": "II.B",
+      "text": "A jurisdiction-wide De Facto measure constructed without underlying market-level observations would combine heterogeneous competitive conditions and require an additional weighting rule for markets with different economic importance and measurement coverage."
+    }
   }
 }

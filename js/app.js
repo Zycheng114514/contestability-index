@@ -735,6 +735,7 @@ window.CI_BOOT = function () {
     panel.classList.remove("open");
     panel.hidden = true;
     Object.keys(cellButtons).forEach(function (k) { cellButtons[k].classList.remove("active"); });
+    Object.keys(indButtons).forEach(function (k) { indButtons[k].classList.remove("active"); });
     if (!silent && current && cellButtons[current.pid + "|" + current.code]) cellButtons[current.pid + "|" + current.code].focus();
     current = null;
   }
@@ -806,19 +807,75 @@ window.CI_BOOT = function () {
   });
   document.addEventListener("click", function (e) {
     if (panel.hidden || panel.contains(e.target)) return;
-    if (e.target.closest && e.target.closest(".cell, .cat-row button, .open-doc")) return;
+    if (e.target.closest && e.target.closest(".cell, .cat-row button, .open-doc, .ind")) return;
     closePanel(true);
   });
 
+  // The full texts are in their own file, fetched the first time one is opened (see js/db.js).
   function openDoc(doc) {
     current = null;
     openPanel(function (p) {
       p.appendChild(el("p", "crumb", jurName[doc.jurisdiction] + " · full text"));
       p.appendChild(el("h2", null, doc.name || doc.stem));
       p.appendChild(el("p", "small muted", [doc.language, doc.file, Math.round(doc.chars / 1000) + "k characters"].filter(Boolean).join(" · ")));
-      var r = window.CI_DB.exec("select content from document_texts where doc_id = " + Number(doc.id));
-      var text = r.length && r[0].values.length ? r[0].values[0][0] : "";
-      p.appendChild(el("div", "reader", text || "No text on file."));
+      var reader = el("div", "reader", "Loading the text…");
+      p.appendChild(reader);
+      window.CI_TEXT(doc.id).then(function (text) { reader.textContent = text || "No text on file."; })
+        .catch(function (e) { reader.textContent = "The text could not be loaded (" + (e && e.message ? e.message : e) + ")."; });
+    });
+  }
+
+  // One De Facto indicator for one gatekeeper-market pair: the two observations, the coded evidence and its
+  // sources, and the market-level De Jure record for the same mechanism.
+  var indButtons = {};
+  var CONF = { "HIGH": [100, "high"], "MODERATE": [75, "moderate"], "LOW-MOD": [50, "low to moderate"], "LOW": [25, "low"] };
+  function openIndicator(u, mid) {
+    var m = mechById[mid], unit = unitById[u];
+    var it = D.deFacto.items.filter(function (x) { return x.unit === u && x.mechanism === mid; })[0];
+    if (!it) return;
+    current = null;
+    Object.keys(indButtons).forEach(function (k) { indButtons[k].classList.toggle("active", k === u + "|" + mid); });
+    openPanel(function (p) {
+      p.appendChild(el("p", "crumb", m.dimension + " " + dimById[m.dimension].name + " · indicator " + m.code));
+      p.appendChild(el("h2", null, m.indicator + ": " + unit.name));
+      p.appendChild(el("p", "small muted", unit.gatekeeper + " · " + unit.market + " · European Union"));
+      var states = D.paper.codingStates || {};
+      if (it.status === "scored") {
+        var fr = el("div", "factor-row two");
+        [[DF_BASE, it.pre], [DF_NOW, it.post]].forEach(function (x) {
+          fr.appendChild(add(paint(el("div", "factor"), x[1]), el("span", "fl", x[0]), el("span", "fv", glyph(x[1]))));
+        });
+        p.appendChild(fr);
+        if (it.confidence) {
+          var lvl = (CONF[it.confidence] || [0, it.confidence.toLowerCase()])[1], def = (D.paper.confidenceLevels || {})[cap(lvl)];
+          p.appendChild(el("p", "small", "Confidence: " + lvl + (def ? " (" + def + ")" : "") + "."));
+        }
+      } else if (it.status === "missing") {
+        p.appendChild(el("p", "formula", "Missing" + (states.Missing ? ": " + states.Missing : "") + ". Left out of the index."));
+      } else {
+        p.appendChild(el("p", "formula", "Not applicable" + (states["Not Applicable"] ? ": " + states["Not Applicable"] : "") + ". Left out of the index."));
+      }
+      p.appendChild(el("h4", null, "Evidence and scoring rationale"));
+      p.appendChild(el("p", null, it.evidence || "—"));
+      if (it.sources.length) {
+        p.appendChild(el("h4", null, "Sources"));
+        var ul = el("ul", "link-list");
+        it.sources.forEach(function (l) {
+          ul.appendChild(l.url ? add(el("li"), extLink(l.url, l.title), el("span", "muted small", " · " + domain(l.url))) : el("li", null, l.title));
+        });
+        p.appendChild(ul);
+      }
+      var dj = D.markets.deJure.filter(function (r) { return r.unit === u && r.mechanism === mid && r.period === "current"; })[0];
+      if (dj) {
+        p.appendChild(el("h4", null, "The law for this mechanism in this market, " + DJ_DATE));
+        p.appendChild(add(el("p"), paint(el("span", "pill-inline", glyph(dj.score)), dj.score), " ", el("strong", null, m.id + ". " + m.name),
+          " · min(Existence " + dj.existence + ", Scope " + dj.scope + ", Enforceability " + dj.enforceability + ")"));
+        if (dj.provision) p.appendChild(el("p", "small", dj.provision));
+        if (dj.hook) p.appendChild(el("p", "small", dj.hook));
+        if (dj.extract) p.appendChild(el("blockquote", null, dj.extract));
+        if (dj.note) p.appendChild(el("p", "small muted", dj.note));
+      }
+      p.appendChild(el("p", "small muted", "Esc closes."));
     });
   }
 
@@ -934,14 +991,12 @@ window.CI_BOOT = function () {
                         el("em", null, "actually open?")));
     hin.appendChild(el("p", "lede", "What is the difference between countries? We answer these questions in two layers: what the law " +
       "requires (De Jure) and what we observe in the market (De Facto)."));
+    // The short answer: one group of figures per question, each leading to the part of the page that shows it.
+    var targets = {};
+    hin.appendChild(answers(targets));
     hin.appendChild(aiP("The De Jure layer scores " + words(nM) + " pro-contestability obligation categories, grouped into " +
       words(nD) + " dimensions, in the law of " + words(nJ) + " jurisdictions as of " + DJ_DATE + ". The De Facto layer scores the same " +
       words(nM) + " mechanisms as observed in " + words(nU) + " European Union gatekeeper–market pairs, in " + DF_BASE + " and " + DF_NOW + ".", "brief"));
-    var stats = el("div", "hero-stats");
-    [[nJ, "Jurisdictions"], [nM, "Obligation categories"], [nD, "Dimensions"], [nU, "EU gatekeeper–market pairs"]].forEach(function (x) {
-      stats.appendChild(add(el("div", "hero-stat"), el("b", null, String(x[0])), el("span", null, x[1])));
-    });
-    hin.appendChild(stats);
     var cta = el("button", "btn btn-fill", "Explore the data");
     cta.type = "button";
     hin.appendChild(cta);
@@ -951,6 +1006,7 @@ window.CI_BOOT = function () {
     /* 2-4. Map, hover card and plot zone in the same place */
     var ex = el("section");
     ex.id = "explore";
+    targets.map = ex;
     cta.addEventListener("click", function () { scrollToEl(ex); });
     var seg = el("div", "seg"), bMap = el("button", null, "Map"), bPlot = el("button", null, "Plot zone");
     seg.setAttribute("role", "group");
@@ -963,7 +1019,7 @@ window.CI_BOOT = function () {
     add(stage, mapTitle, world, el("div", "map-hint", "Hover over a jurisdiction for its scores · click to open its profile"));
     var noteRow = el("p", "map-note small muted");
     var sw = el("span", "sw");
-    sw.style.cssText = "display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px;background:#e8e8e8";
+    sw.style.cssText = "display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px;background:var(--land)";
     add(noteRow, sw, "Not assessed. Germany carries its own score; the other 26 EU member states carry the EU score.");
     var mapView = add(el("div"), stage, noteRow);
     var plotView = el("div");
@@ -1045,7 +1101,7 @@ window.CI_BOOT = function () {
        "A dimension is the mean of its categories, and the index is the mean of the " + words(nD) + " dimensions."],
       ["De Facto covers three EU pairs",
        "The De Facto layer is measured for " + listText(UNITS.map(function (u) { return unitById[u].name; })) + " in the European Union. " +
-       "The other jurisdictions have De Jure scores only, so the map shows the law everywhere and the market only in the EU card."],
+       "The other jurisdictions have De Jure scores only, so the map shows the law everywhere; the market observations are in the EU's card and in the next section."],
       ["Before and after, not cause and effect",
        "The De Facto observations compare " + DF_BASE + ", before the Digital Markets Act's obligations applied in March 2024, with " +
        DF_NOW + ". A change between the two dates happened after the Act applied; the index does not show that the Act caused it."]
@@ -1059,13 +1115,18 @@ window.CI_BOOT = function () {
     notes.appendChild(nin);
     app.appendChild(notes);
 
+    /* The De Facto layer: the three gatekeeper-market pairs, indicator by indicator */
+    targets.markets = marketsSection();
+    app.appendChild(targets.markets);
+
     /* 6. Key points */
-    var kps = section(null, "key-points"), kin = el("div", "wrap");
+    var kps = section("alt", "key-points"), kin = el("div", "wrap");
     head(kin, "Key points", "Answers to the questions people ask first",
       aiP("The answers below are drafts. Every number in them is read from the project database when this page opens.", "sec-intro"));
     var kl = el("div", "kp-list");
     keyPoints().forEach(function (k, i) {
       var c = el("div", "kp"), t = el("div");
+      if (k.id) targets[k.id] = c;
       t.appendChild(el("p", "qn", "Question " + (i + 1)));
       t.appendChild(el("h3", null, k.q));
       if (k.big) {
@@ -1075,8 +1136,9 @@ window.CI_BOOT = function () {
       }
       k.text.forEach(function (p) { t.appendChild(aiP(p)); });
       if (k.more) {
-        var mo = link(k.more[0] === "explore" ? "#/" : k.more[0], k.more[1] + " →");
-        if (k.more[0] === "explore") mo.addEventListener("click", function (e) { e.preventDefault(); scrollToEl(ex); });
+        var here = k.more[0] === "explore" ? ex : k.more[0] === "markets" ? targets.markets : null;
+        var mo = link(here ? "#/" : k.more[0], k.more[1] + " →");
+        if (here) mo.addEventListener("click", function (e) { e.preventDefault(); scrollToEl(here); });
         t.appendChild(add(el("p", "small"), mo));
       }
       var v = el("div", "viz");
@@ -1089,7 +1151,7 @@ window.CI_BOOT = function () {
     app.appendChild(kps);
 
     /* where to go next */
-    var nx = section("alt"), xin = el("div", "wrap");
+    var nx = section(), xin = el("div", "wrap");
     head(xin, "Go further", "Read the details");
     var cards = el("div", "link-cards");
     [["#/jurisdictions", "Jurisdiction profiles", "Every category score, with the law behind it, for each of the " + words(nJ) + " jurisdictions."],
@@ -1105,6 +1167,169 @@ window.CI_BOOT = function () {
     xin.appendChild(cards);
     nx.appendChild(xin);
     app.appendChild(nx);
+  }
+
+  // Three groups of figures under the headline: what the law requires, what the markets show, and the gap
+  // between the two. Each card scrolls to the part of the page that shows it (targets is filled by the caller).
+  function answers(targets) {
+    var wrap = el("div", "answers");
+    function card(key, kicker, big, cap2, body, go) {
+      var a = link("#/", "");
+      a.className = "answer";
+      a.addEventListener("click", function (e) { e.preventDefault(); scrollToEl(targets[key]); });
+      add(a, el("span", "k", kicker), el("span", "big", big), el("span", "cap", cap2), body, el("span", "go", go + " →"));
+      wrap.appendChild(a);
+    }
+    function span(a, b) { return num(a) === num(b) ? num(a) : num(a) + "–" + num(b); }
+
+    // the law: every jurisdiction on one line, the lowest and the highest named
+    var rk = rankedBy("overall"), hi = val(rk[0], "overall"), lo = val(rk[rk.length - 1], "overall");
+    var s = svg("svg", { viewBox: "0 0 300 44", class: "answer-strip", role: "img",
+                         "aria-label": "De Jure index of the " + words(nJ) + " jurisdictions, from " + num(lo) + " to " + num(hi) });
+    function X(v) { return 8 + v * 284; }
+    s.appendChild(svg("line", { x1: X(0), x2: X(1), y1: 13, y2: 13, stroke: "rgba(255,255,255,.35)", "stroke-width": 1 }));
+    var groups = {};
+    rk.forEach(function (c) { var k = num(val(c, "overall")); (groups[k] = groups[k] || []).push(c); });
+    Object.keys(groups).sort().forEach(function (k) {
+      var dot = svg("circle", { cx: X(+k), cy: 13, r: 6, fill: scoreColor(+k), stroke: "#fff", "stroke-width": 1.5 });
+      withTip(dot, function () { return [groups[k].map(function (c) { return jurName[c]; }).join(", ") + ": " + k]; });
+      s.appendChild(dot);
+    });
+    s.appendChild(stext({ x: X(0), y: 38 }, groups[num(lo)].map(function (c) { return jurName[c]; }).join(", ")));
+    s.appendChild(stext({ x: X(1), y: 38, "text-anchor": "end" }, groups[num(hi)].map(function (c) { return jurName[c]; }).join(", ")));
+    card("map", "What the law requires", span(lo, hi), "De Jure index, " + words(nJ) + " jurisdictions, " + DJ_DATE, s, "See the map");
+
+    // the markets: each pair's De Facto index, with a tick at the earlier observation
+    var rows2 = el("span", "arows"), dfs = [];
+    UNITS.forEach(function (u) {
+      var a = mVal("de_facto", u, "baseline", "overall"), b = mVal("de_facto", u, "current", "overall");
+      if (b === null) return;
+      dfs.push(b);
+      var trk = el("span", "atrk"), f = el("span", "fill");
+      f.style.width = (b * 100) + "%";
+      f.style.background = UNIT_COLOR[u];
+      trk.appendChild(f);
+      if (a !== null) { var tick = el("span", "tick"); tick.style.left = (a * 100) + "%"; trk.appendChild(tick); }
+      add(rows2, el("span", "nm", unitById[u].name), trk, el("span", "v", (a !== null ? num(a) + " → " : "") + num(b)));
+    });
+    card("markets", "What the markets show", span(Math.min.apply(null, dfs), Math.max.apply(null, dfs)),
+         "De Facto index, " + words(nU) + " EU gatekeeper–market pairs, " + DF_NOW + "; the tick marks " + DF_BASE, rows2, "See the three markets");
+
+    // the gap: De Jure minus De Facto for the same pairs, drawn as the part of the bar the market has not reached
+    var rows3 = el("span", "arows"), eff = UNITS.map(function (u) { return effOf(u, "current"); }).filter(function (e) { return e && e.gap !== null; });
+    eff.forEach(function (e) {
+      var trk = el("span", "atrk"), f = el("span", "fill dim"), g = el("span", "gapseg");
+      f.style.width = (e.deFacto * 100) + "%";
+      g.style.left = (e.deFacto * 100) + "%";
+      g.style.width = (Math.max(0, e.deJure - e.deFacto) * 100) + "%";
+      add(trk, f, g);
+      add(rows3, el("span", "nm", unitById[e.unit].name), trk, el("span", "v", num(e.gap)));
+    });
+    var gaps = eff.map(function (e) { return e.gap; });
+    card("gap", "The gap between them", span(Math.min.apply(null, gaps), Math.max.apply(null, gaps)),
+         "De Jure" + (eff.every(function (e) { return e.deJure === 1; }) ? " (" + num(1) + " in each market)" : "") + " minus De Facto, " + DF_NOW +
+         "; the white part of each bar", rows3, "See the gap");
+    return wrap;
+  }
+
+  /* ---------------------------------------------------------- the three gatekeeper-market pairs */
+  // One tile per indicator: the left half is the earlier observation, the right half the latest; the line under
+  // the tile is the coder's confidence. Missing and Not Applicable indicators are drawn as such, not as zeros.
+  function indicatorTile(u, it) {
+    var m = mechById[it.mechanism], scored = it.status === "scored";
+    var b = el("button", "ind" + (scored ? "" : it.status === "missing" ? " miss" : " na"));
+    b.type = "button";
+    var conf = CONF[it.confidence] || null;
+    if (scored) {
+      add(b, paint(el("span", "h", glyph(it.pre)), it.pre), paint(el("span", "h", glyph(it.post)), it.post));
+      if (conf) { var cb = el("span", "conf"); cb.style.width = conf[0] + "%"; b.appendChild(cb); }
+    } else b.textContent = it.status === "missing" ? "M" : "n/a";
+    var what = scored ? DF_BASE + " " + glyph(it.pre) + " → " + DF_NOW + " " + glyph(it.post)
+      : it.status === "missing" ? "Missing: too little evidence to score" : "Not applicable in this market";
+    b.setAttribute("aria-label", m.code + " " + m.indicator + ", " + unitById[u].name + ". " + what +
+      (scored && conf ? ", confidence " + conf[1] : "") + ". Opens the evidence.");
+    withTip(b, function () {
+      return [m.code + " " + m.indicator, what, scored && conf ? "Confidence: " + conf[1] : "", "Click for the evidence"].filter(Boolean);
+    });
+    b.addEventListener("click", function () { openIndicator(u, it.mechanism); });
+    indButtons[u + "|" + it.mechanism] = b;
+    return add(el("span", "indcell"), b, el("span", "code", m.code.replace(/^D/, "")));
+  }
+
+  function marketCard(u) {
+    var unit = unitById[u], pre = mIdx("de_facto", u, "baseline"), post = mIdx("de_facto", u, "current"), e = effOf(u, "current");
+    var items = D.deFacto.items.filter(function (x) { return x.unit === u; });
+    function count(st) { return items.filter(function (x) { return x.status === st; }).length; }
+    var card = el("div", "mcard"), h = el("h3"), dot = el("i");
+    dot.style.background = UNIT_COLOR[u];
+    add(h, dot, unit.name);
+    card.appendChild(el("p", "sec-kicker", "Market: " + unit.market));
+    card.appendChild(h);
+    card.appendChild(el("p", "small muted", [unit.gatekeeper, unit.market, unit.designationDate ? "designated " + day(unit.designationDate) : ""]
+      .filter(Boolean).join(" · ")));
+    var big = el("div", "mbig"), delta = post.index - (pre ? pre.index : 0);
+    add(big, el("b", null, (pre ? num(pre.index) + " → " : "") + num(post.index)),
+        el("span", null, "De Facto index, " + (pre ? DF_BASE + " → " : "") + DF_NOW + (pre ? " (" + (delta >= 0 ? "+" : "") + num(delta) + ")" : "")));
+    card.appendChild(big);
+    var facts = el("div", "mfacts");
+    [["De Jure, market level, " + DJ_DATE, e ? num(e.deJure) : "—"], ["Gap, De Jure minus De Facto", e ? num(e.gap) : "—"],
+     ["Indicators scored", post.nScored + " of " + post.nApplicable + " applicable"], ["Missing", String(count("missing"))],
+     ["Not applicable", String(count("not_applicable"))]].forEach(function (x) { add(facts, el("span", null, x[0]), el("b", null, x[1])); });
+    card.appendChild(facts);
+    DIMS.forEach(function (d) {
+      var a = pre && pre.dims[d], b = post.dims[d];
+      var row = el("div", "mdim"), hd = el("div", "mdim-head");
+      add(hd, el("span", "nm", d + " " + DIM_SHORT[d]),
+          el("span", "v", (a && a.score !== null ? num(a.score) : "—") + " → " + (b && b.score !== null ? num(b.score) : "—") +
+                          (b ? " · " + b.nScored + " of " + b.nApplicable + " scored" : "")));
+      var tiles = el("div", "mtiles");
+      items.filter(function (x) { return x.dim === d; }).forEach(function (it) { tiles.appendChild(indicatorTile(u, it)); });
+      add(row, hd, tiles);
+      card.appendChild(row);
+    });
+    return card;
+  }
+
+  function marketsSection() {
+    indButtons = {};
+    var s = section(null, "markets"), w = el("div", "wrap");
+    head(w, "What the markets show", "Three gatekeeper–market pairs in the EU, indicator by indicator",
+      aiP("Each pair is scored on the same " + words(nM) + " indicators in " + DF_BASE + " and in " + DF_NOW + ". A tile shows one indicator at the two dates. " +
+          "Click a tile for the evidence, the sources and the law that applies to it.", "sec-intro"));
+    // How to read a tile; the meaning of each score is the Methodology Manual's own wording where the site holds it.
+    var man = D.paper.manual || {}, scale = man.deFactoScale;
+    var key = el("div", "scale-list"), sample = el("span", "ind sample");
+    add(sample, paint(el("span", "h", "0"), 0), paint(el("span", "h", "½"), 0.5));
+    var cb = el("span", "conf");
+    cb.style.width = "75%";
+    sample.appendChild(cb);
+    add(key, sample, el("span", null, "One indicator. Left half: " + DF_BASE + ". Right half: " + DF_NOW +
+      ". Line underneath: the coder's confidence, from low (short) to high (full width)."));
+    [[0, "0", "No working path."], [0.5, "0.5", "A working path with friction."], [1, "1", "No gatekeeper-imposed friction."]].forEach(function (x) {
+      add(key, paint(el("span", "pill-inline", glyph(x[0])), x[0]), el("span", null, scale && scale[x[1]] ? scale[x[1]] : x[2]));
+    });
+    add(key, el("span", "ind miss sample", "M"), el("span", null, "Missing. " + (scale && scale.Missing ? scale.Missing : "Left out of the index.")),
+        el("span", "ind na sample", "n/a"), el("span", null, "Not applicable. " + (scale && scale["Not Applicable"] ? scale["Not Applicable"] : "Left out of the index.")));
+    w.appendChild(key);
+    if (scale) w.appendChild(el("p", "small muted", "Score definitions: " + man.source + ", section " + scale.section + "."));
+    var grid = el("div", "mgrid");
+    UNITS.forEach(function (u) { grid.appendChild(marketCard(u)); });
+    w.appendChild(grid);
+    // The Manual's own limits on what these scores say, quoted. The first names the Google Search figure, so it is
+    // shown only while the database still gives that figure.
+    var quotes = [];
+    if (man.indexMeaning && num(mVal("de_facto", "google_search", "current", "overall")) === "0.52") quotes.push(man.indexMeaning);
+    if (man.pilotLimitation) quotes.push(man.pilotLimitation);
+    if (quotes.length) {
+      var co = el("div", "callout");
+      co.appendChild(add(el("p"), el("strong", null, "What these scores do not say, in the words of the " + man.source.split(" (")[0])));
+      quotes.forEach(function (q) { co.appendChild(el("p", "small", "“" + q.text + "” (section " + q.section + ")")); });
+      w.appendChild(co);
+    }
+    w.appendChild(add(el("p", "small"), link("#/jurisdiction/EU", "Law and market side by side in the European Union profile →"), " · ",
+                      link("#/cases", "Case studies →")));
+    s.appendChild(w);
+    return s;
   }
 
   function keyPoints() {
@@ -1137,7 +1362,7 @@ window.CI_BOOT = function () {
       text: [(ch.every(function (x) { return x.b > x.a; }) ? "All " + words(ch.length) + " pairs scored higher in " + DF_NOW + " than in " + DF_BASE + ". " : "") +
              unitById[up[0].u].name + " rose the most, from " + num(up[0].a) + " to " + num(up[0].b) + ". These are observations from before " +
              "and after the Act's obligations began to apply in March 2024; they are not estimates of the Act's effect."],
-      more: ["#/cases", "Read the case studies"],
+      more: ["markets", "See the three markets, indicator by indicator"],
       viz: function () {
         var w = el("div");
         w.appendChild(seriesKey(UNITS.map(function (u) { return { label: unitById[u].name, color: UNIT_COLOR[u] }; })));
@@ -1150,6 +1375,7 @@ window.CI_BOOT = function () {
     var gaps = eff.map(function (e) { return e.gap; }), dfs = eff.map(function (e) { return e.deFacto; });
     var allFull = eff.every(function (e) { return e.deJure === 1; });
     out.push({
+      id: "gap",
       q: "How far behind the law are the markets?",
       big: eff.map(function (e) { return [num(e.gap), "gap, " + unitById[e.unit].name]; }),
       text: [(allFull ? "In " + DJ_DATE + " EU law requires all " + words(nM) + " obligations in each of the three markets: the market-level De Jure score is " +
@@ -2096,8 +2322,9 @@ window.CI_BOOT = function () {
     w.appendChild(aiP(["The site is a preliminary preview. Its figures come from the project database built " + D.meta.built + " and may change. Where they differ from the working paper, ",
       link("#/data", "the Data page"), " lists each difference and its reason."]));
     w.appendChild(el("h3", null, "How the site works"));
-    w.appendChild(aiP("The site is a set of static files. When a page opens, your browser downloads the project database (SQLite, " +
-      (D.meta.dbBytes / 1e6).toFixed(1) + " MB) and computes every figure from it with sql.js, so the numbers on the page and the downloadable file are the same."));
+    w.appendChild(aiP("The site is a set of static files. When a page opens, your browser downloads a copy of the project database without the legal " +
+      "full texts (SQLite, " + (D.meta.dbBytes / 1e6).toFixed(1) + " MB) and computes every figure from it with sql.js. A full text is fetched only when you open one. " +
+      "The download is the whole database" + (D.meta.fullDbBytes ? " (" + (D.meta.fullDbBytes / 1e6).toFixed(1) + " MB)" : "") + "; its scores are the same rows."));
     w.appendChild(add(el("p"), extLink(APPENDIX, "Online appendix"), " · ", link(D.meta.dbUrl, "Download the database")));
     s.appendChild(w);
     app.appendChild(s);

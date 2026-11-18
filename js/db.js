@@ -231,7 +231,8 @@
         deJure: paper.deJure, deFacto: paper.deFacto, effectiveSpecs: paper.effectiveSpecifications,
         codingStates: paper.codingStates, dimensionQuestions: paper.dimensionQuestions,
         reportingRequirements: paper.reportingRequirements, handbook: paper.handbook,
-        confidenceLevels: paper.confidenceLevels, manual: paper.manual || {}, discrepancies: discrepancies, deFactoCompare: dfCompare
+        confidenceLevels: paper.confidenceLevels, manual: paper.manual || {}, handbookText: paper.handbookText || {},
+        documents: paper.documents || [], discrepancies: discrepancies, deFactoCompare: dfCompare
       }
     };
   }

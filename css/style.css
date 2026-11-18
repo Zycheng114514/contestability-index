@@ -729,3 +729,10 @@ table.entry-fields th { width: 230px; text-transform: none; letter-spacing: 0; f
 .chart-foot.top { margin: -4px 0 10px; }
 .lib-bar { align-items: flex-start; }
 .lib-bar .ctrl-left { width: auto; flex: 1; }
+
+/* indicator-by-indicator explanations in the Methodology */
+.ind-dim { margin: 16px 0 6px; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
+.ind-state { margin: 0 0 4px; font-weight: 700; font-size: 0.86rem; }
+details.fold.indx table.entry-fields th { white-space: nowrap; }
+details.fold.indx td p.small { margin: 0 0 6px; color: var(--ink-2); }
+.doc-list li a + a { margin-left: 0; }

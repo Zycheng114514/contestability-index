@@ -398,5 +398,117 @@
       "section": "VI.C",
       "text": "Effective Contestability provides a convenient summary of contestability but should not replace analysis of the underlying De Jure and De Facto measures. Markets with similar Effective Contestability scores may exhibit substantially different institutional environments and market outcomes."
     }
-  }
+  },
+  "handbookText": {
+    "source": "Coding Handbook V4.1",
+    "deJureFactors": {
+      "section": "II.A",
+      "intro": "Each mechanism–jurisdiction cell rests on three factors, each scored on the same 0 / 0.5 / 1 grid: Existence (whether the relevant obligation is present in the enacted framework), Scope (the range of firms, services, and activities covered), and Enforceability (whether the provision is backed by credible oversight and sanctions).",
+      "existence": {
+        "question": "Is an operative obligation on point present in the enacted framework?",
+        "0": "Absent: no binding obligation on point; general competition/consumer law only; drafts; or a designation framework under which no obligation has yet been imposed.",
+        "0.5": "Present but incomplete or formally weak: partial or adjacent coverage; a statutory catalogue still requiring case-by-case activation; administrative guidance of weak formal status; or case-specific precedents/commitments only.",
+        "1": "A binding, enacted obligation on point whose content is fixed ex ante by the instrument itself (statute, regulation, court order, or imposed conduct requirement)."
+      },
+      "scope": {
+        "question": "What range of firms, services and activities does the provision reach?",
+        "0": "No coverage: the instrument reaches no relevant firm, service or activity. Scope does not fall to 0 automatically when Existence = 0. Under legal form F5 an enacted designation framework fixes the addressees without fixing an obligation on point, so Scope may be recorded as 0.5 and Enforceability as 0.5; the final score is 0 through the minimum rule.",
+        "0.5": "A subset of the provision’s domain: firm-specific instruments (remedies, designations, conduct requirements), or sectoral/market slices covering only part of the mechanism’s economic domain.",
+        "1": "A rule of general application covering the mechanism’s full economic domain within the jurisdiction."
+      },
+      "enforceability": {
+        "question": "Is the provision supported by credible oversight and sanctions?",
+        "0": "No enforcement mechanism.",
+        "0.5": "Enforcement requires fresh case-by-case proceedings; guidance without penalties or private enforcement; or machinery untested / not yet effective.",
+        "1": "A dedicated regulator (or supervising court) with penalty powers; the obligation is self-executing or directly enforceable, including private enforcement where available."
+      }
+    },
+    "minRule": {
+      "section": "II.A",
+      "text": "Final provision score = MIN(Existence, Scope, Enforceability). The minimum is used because the factors do not compensate for one another: an obligation that does not exist is not helped by strong enforcement machinery; a well-drafted obligation binding a single firm is still not a market-wide rule; a broad rule without credible enforcement offers little protection in practice. Scope is judged against the mechanism’s own economic domain rather than the whole economy — a marketplace-only statute covers the full domain of a marketplace-native mechanism (Scope = 1 there) but only part of the domain of a mechanism that operates economy-wide (Scope = 0.5)."
+    },
+    "mechanismRoutes": {
+      "section": "II.B",
+      "text": "A mechanism is a stable contestability channel rather than a provision of any single statute; where a channel can be secured through more than one route (for example, alternative distribution through either sideloading or third-party app stores, or technical interoperability through either API access or hardware access), the routes are treated as one mechanism and scored on the strongest available channel."
+    },
+    "primaryText": {
+      "section": "II.B",
+      "text": "The data were collected in four steps, so that every score can be traced to a named legal instrument and every instrument to its official text. First, for each jurisdiction the digital-competition instruments in force or pending as of June 2026 (statutes, regulations, court remedies, conduct requirements, administrative rules) were registered with citations and links to official sources, together with a mapping from each mechanism to the articles that govern it. Second, for each mechanism the operative text of every instrument bearing on it was copied verbatim from the primary source, with English translations where needed; scoring works from this primary text, not from secondary summaries. Third, each mechanism–jurisdiction pair was scored on the three factors set out in Section II.A. Fourth, the mechanism scores were averaged into dimension scores and then into the De Jure Contestability Index reported in Section IV.A. The records produced at each step are kept in the project database."
+    },
+    "legalForms": {
+      "section": "II.C",
+      "text": "To keep the factor signatures comparable across very different legal systems, instruments are classified into one of eight mutually exclusive legal forms; each form has a typical factor signature from which its score ceiling follows under the MIN rule. This is why, outside the EU and Germany, most non-zero cells sit at 0.5: they rest on firm-specific orders, sectoral statutes, guidance, or case practice rather than on generally applicable ex ante statutes."
+    },
+    "sectoralAtMarketLevel": {
+      "section": "II.C",
+      "text": "Finally, when a market-level index is computed, a sectoral instrument counts at full strength within its own market (for example, Turkey’s marketplace rules in the marketplace market), even where the jurisdiction-level table shows a Scope-capped 0.5."
+    },
+    "applicability": {
+      "section": "III.A",
+      "text": "Before scoring, each indicator is assigned an applicability status. Applicable means the mechanism operates in the market. Not Applicable means it does not, and the indicator is excluded from aggregation rather than scored zero, since non-applicability carries no information about contestability. Applicable but Missing means the mechanism operates but the evidence required to score it has not been obtained; the indicator is excluded from the denominator and the reason is recorded. Missing status is used where a score would otherwise depend on inference, on general knowledge of a platform, or on the absence of an adverse regulatory finding."
+    },
+    "aggregation": {
+      "section": "III.A",
+      "text": "Dimension scores are the unweighted arithmetic mean of the applicable indicators scored. The De Facto Contestability Index is the equal-weighted average of the four dimension scores. The De Jure layer takes the minimum of Existence, Scope and Enforceability because a missing obligation is not cured by enforcement machinery. The De Facto layer averages, because partial progress on several channels adds to observed contestability."
+    },
+    "adoption": {
+      "section": "III.A",
+      "text": "Formal availability does not establish adoption. Where an indicator concerns use or market behaviour, platform documentation alone supports no score above 0.5."
+    },
+    "marketShare": {
+      "section": "III.A",
+      "text": "Market-share persistence is excluded as a scored dimension. Following Furman et al. (2019), market share is an outcome of contestability rather than a dimension of it, and including it would introduce circularity into the Index."
+    },
+    "scoredOnce": {
+      "section": "III.B",
+      "text": "Each indicator is scored once. Where an observed condition bears on more than one mechanism, it is assigned to the mechanism whose economic function it most directly reflects, and the assignment is documented. The set is not extended with market-specific composites: aggregate measures such as cost of entry, or structural infrastructure costs not imposed by the gatekeeper, are recorded in the evidence column rather than scored."
+    },
+    "variation": {
+      "section": "III.C",
+      "applicability": "Some mechanisms do not operate in a given market. Cross-platform messaging connectivity applies to number-independent interpersonal communications and to no other market coded here. Parity applies to app stores and intermediation, and reaches search through Shopping, which sits inside the market boundary. Anti-steering reaches any market whose business users are acquired through a Core Platform Service, and so applies in search, though the conduct it observes there differs. Applicability is fixed before scoring and held constant across jurisdictions and periods within a market.",
+      "observation": "The same mechanism is observed through different evidence. Default switching is observed in search through choice-screen deployment and the number of steps to change an engine, and in app distribution through the range of reassignable default categories and whether the store is among them.",
+      "competitiveWeight": "The same indicator carries different economic weight across markets. Multi-homing signals little in search, where a user running two engines still sends most queries to one, and signals more in social networking, where accounts on several services coexist and attention divides. Data portability matters more in social networking, where the social graph is the asset that holds users, than in search. Interoperability binds in messaging and operating systems and matters less in marketplaces. Under equal weighting these differences appear in the evidence and in score dispersion, not in the weights. A market-specific weighting scheme requires justification and documentation."
+    },
+    "comparability": {
+      "section": "III.C",
+      "text": "De Facto scores are comparable across jurisdictions and periods within a market, and across gatekeepers within a market where the same indicator set has been applied. They are not comparable across markets. An index of 0.50 in app distribution and 0.50 in search describe different conditions reached through different mechanisms. Cross-market statements should be made at the level of the mechanism."
+    },
+    "gatekeeper": {
+      "section": "III.D",
+      "text": "De Facto Contestability is measured for a gatekeeper–market pair. The Methodology Manual requires the gatekeeper to be identified as part of the observation where competitive conditions are platform-specific. An indicator set applies only where the named firm operates the bottleneck the mechanism describes."
+    },
+    "zeroVsAbsent": {
+      "section": "III.D",
+      "text": "Three consequences follow. Applicability is determined against the named gatekeeper’s service. Evidence must concern that gatekeeper; a decision addressed to Apple establishes nothing about Alphabet. And a pre-period score of 0 is distinct from non-participation: Apple scores 0 on alternative distribution in December 2023 because it prohibited the channel, which is a finding about contestability, while a firm operating no service in the market is not scored."
+    },
+    "evidence": {
+      "section": "III.E",
+      "text": "Each pair is scored from Commission non-compliance decisions, preliminary findings and specification decisions; gatekeeper compliance reports, developer documentation and published fee schedules; national competition and data-authority actions; judgments of the Court of Justice; and market data from independent providers. Every cell is traceable from its score to the originating document.",
+      "penalty": "A regulatory penalty is not by itself evidence of a market condition. A gatekeeper may be fined because its conduct did not change, in which case the coding is unchanged. A score moves only on documented change in the observable condition. Where a penalty decision also records implemented changes, those records are the evidence, and the decision is cited for the finding that friction persists.",
+      "announced": "Announced measures that were not operative during the observation window are recorded in the evidence column and do not affect the score."
+    }
+  },
+  "documents": [
+    {
+      "id": "manual",
+      "title": "Methodology Manual V3.2",
+      "file": "files/Contestability_Index_Methodology_Manual_V3.2.pdf",
+      "bytes": 494419,
+      "pages": 38
+    },
+    {
+      "id": "handbook",
+      "title": "Coding Handbook V4.1",
+      "file": "files/Contestability_Index_Coding_Handbook_V4.1.pdf",
+      "bytes": 1431651,
+      "pages": 60
+    },
+    {
+      "id": "paper",
+      "title": "Working paper, July 2026",
+      "file": "files/Beyond_Market_Concentration_Working_Paper_2026-07.pdf",
+      "bytes": 1384104,
+      "pages": 37
+    }
+  ]
 }

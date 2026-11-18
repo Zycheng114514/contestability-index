@@ -156,7 +156,8 @@ window.CI_BOOT = function () {
   D.deFacto.units.forEach(function (u) { unitById[u.id] = u; });
   var UNITS = D.deFacto.units.map(function (u) { return u.id; });
   // Categorical slots in the validated default order; colour follows the entity, never its rank.
-  var SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"];
+  // The first four are the validated default order; five more follow so that all nine jurisdictions can be compared.
+  var SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#8e5bd0", "#d6457f", "#2ba9bd", "#7a8794", "#8a5a2b"];
   var UNIT_COLOR = {};
   UNITS.forEach(function (u, i) { UNIT_COLOR[u] = SERIES[i]; });
   var LAW = "#151515";  // De Jure marks in the law-against-market charts
@@ -852,7 +853,8 @@ window.CI_BOOT = function () {
       if (c.pipeline) { p.appendChild(el("h4", null, "Announced, not in force")); p.appendChild(el("p", "small", c.pipeline)); }
       if (c.evidence_date) p.appendChild(el("p", "small muted", "Evidence as of " + c.evidence_date + "."));
       p.appendChild(add(el("p", "panel-links"), link("#/methodology/" + m.code, "How this category is scored →"), " ",
-                        link("#/jurisdiction/" + code, "Open the " + jurName[code] + " profile →")));
+                        link("#/jurisdiction/" + code, "Open the " + jurName[code] + " profile →"), " ",
+                        link("#/data/library?j=" + code + "&cat=" + m.id + "&period=dj", "Sources of this observation →")));
       p.appendChild(el("p", "small muted", "Record " + recordId("dj", code, m, "current") + " · database row " + (c.id || "—") + "."));
       p.appendChild(el("p", "small muted", "Keys: ← → jurisdictions · ↑ ↓ categories · Esc closes."));
     });
@@ -946,7 +948,8 @@ window.CI_BOOT = function () {
         if (dj.note) p.appendChild(el("p", "small muted", dj.note));
       }
       p.appendChild(add(el("p", "panel-links"), link("#/methodology/" + m.code, "How this indicator is scored →"), " ",
-                        link("#/explore/compare?type=gap&unit=" + u + "&cat=" + mid, "Law and market for this mechanism →")));
+                        link("#/explore/compare?type=gap&unit=" + u + "&cat=" + mid, "Law and market for this mechanism →"), " ",
+                        link("#/data/library?type=defacto&cat=" + mid + "&q=" + encodeURIComponent(recordId("df", u, m, "current")), "Sources of this observation →")));
       p.appendChild(el("p", "small muted", "Records " + recordId("df", u, m, "baseline") + " and " + recordId("df", u, m, "current") + "."));
       p.appendChild(el("p", "small muted", "Esc closes."));
     });
@@ -1069,7 +1072,7 @@ window.CI_BOOT = function () {
     if (PERIODS.indexOf(p.period) >= 0) S.period = p.period;
     if (CMPS.indexOf(p.type) >= 0) S.cmp = p.type;
     if (p.j !== undefined) S.jurs = p.j.split(",").map(function (c) { return c.toUpperCase(); })
-      .filter(function (c, i, a) { return jurByCode[c] && a.indexOf(c) === i; }).slice(0, 4);
+      .filter(function (c, i, a) { return jurByCode[c] && a.indexOf(c) === i; });
     if (p.units !== undefined) {
       var us = p.units.split(",").filter(function (u) { return unitById[u]; });
       if (us.length) S.units = UNITS.filter(function (u) { return us.indexOf(u) >= 0; });
@@ -1112,7 +1115,7 @@ window.CI_BOOT = function () {
     b.addEventListener("click", function (e) {
       e.stopPropagation();
       var i = S.jurs.indexOf(code);
-      if (i >= 0) S.jurs.splice(i, 1); else if (S.jurs.length < 4) S.jurs.push(code);
+      if (i >= 0) S.jurs.splice(i, 1); else S.jurs.push(code);
       syncCompare();
     });
     cmpButtons.push(b);
@@ -1120,11 +1123,11 @@ window.CI_BOOT = function () {
     return b;
   }
   function paintToggle(b) {
-    var on = S.jurs.indexOf(b.dataset.code) >= 0, full = !on && S.jurs.length >= 4;
+    var on = S.jurs.indexOf(b.dataset.code) >= 0, full = false;
     b.textContent = on ? "✓ Compare" : "+ Compare";
     b.classList.toggle("on", on);
     b.disabled = full;
-    b.title = full ? "Up to four jurisdictions; remove one first" : on ? "Remove from the comparison" : "Add to the comparison";
+    b.title = on ? "Remove from the comparison" : "Add to the comparison";
     b.setAttribute("aria-pressed", on ? "true" : "false");
     b.setAttribute("aria-label", (on ? "Remove " : "Add ") + jurName[b.dataset.code] + (on ? " from" : " to") + " the comparison");
   }
@@ -1616,6 +1619,7 @@ window.CI_BOOT = function () {
     fa.className = "btn btn-outline";
     ft.appendChild(add(el("p"), fa));
     fv.appendChild(rankingList("overall"));
+    fv.appendChild(add(el("p", "chart-foot"), dlButton("contestability_dejure_index.csv", CSV.indexHeader, function () { return CSV.indexRows().filter(function (r) { return r[1] === "jurisdiction"; }); })));
     add(fc, ft, fv);
     w4.appendChild(fc);
     s4.appendChild(w4);
@@ -2022,7 +2026,7 @@ window.CI_BOOT = function () {
     Object.keys(JUR_SLOT).forEach(function (c) { if (S.jurs.indexOf(c) < 0) delete JUR_SLOT[c]; });
     if (JUR_SLOT[code] === undefined) {
       var used = Object.keys(JUR_SLOT).map(function (c) { return JUR_SLOT[c]; });
-      JUR_SLOT[code] = [0, 1, 2, 3].filter(function (k) { return used.indexOf(k) < 0; })[0];
+      JUR_SLOT[code] = SERIES.map(function (x, k) { return k; }).filter(function (k) { return used.indexOf(k) < 0; })[0];
     }
     return JUR_SLOT[code];
   }
@@ -2034,17 +2038,16 @@ window.CI_BOOT = function () {
       var on = S.jurs.indexOf(c) >= 0, b = el("button", "chip pair");
       b.type = "button";
       b.setAttribute("aria-pressed", on ? "true" : "false");
-      b.disabled = !on && S.jurs.length >= 4;
       if (on) { var dot = el("i"); dot.style.background = jurColor(c); b.appendChild(dot); }
       b.appendChild(document.createTextNode(jurName[c]));
       b.addEventListener("click", function () {
         var i = S.jurs.indexOf(c);
-        if (i >= 0) S.jurs.splice(i, 1); else if (S.jurs.length < 4) S.jurs.push(c);
+        if (i >= 0) S.jurs.splice(i, 1); else S.jurs.push(c);
         redraw();
       });
       chips.appendChild(b);
     });
-    host.appendChild(add(el("div", "toolbar"), add(el("div", "ctrl-left"), el("span", "small muted", "Jurisdictions (two to four):"), chips)));
+    host.appendChild(add(el("div", "toolbar"), add(el("div", "ctrl-left"), el("span", "small muted", "Jurisdictions (two or more):"), chips)));
     var sel = S.jurs.slice();
     if (sel.length < 2) { host.appendChild(el("p", "muted", "Pick at least two jurisdictions.")); return; }
     var key = seriesKey(sel.map(function (c) { return { label: jurName[c], color: jurColor(c), shape: "sq" }; }));
@@ -2075,7 +2078,8 @@ window.CI_BOOT = function () {
     host.appendChild(s);
 
     /* dimension charts: where the selected stand among all the jurisdictions */
-    host.appendChild(chartHead("Each dimension among all " + words(nJ) + " jurisdictions", "Coloured: the selected jurisdictions. Grey: the others. Click a dot for the profile."));
+    host.appendChild(chartHead("Each dimension among all " + words(nJ) + " jurisdictions", "Coloured: the selected jurisdictions. Grey: the others. Click a dot for the profile.",
+      [dlButton("contestability_dejure_all_jurisdictions.csv", CSV.indexHeader, function () { return CSV.indexRows().filter(function (r) { return r[1] === "jurisdiction"; }); })]));
     var w2 = 760, lw2 = 196, x0 = lw2 + 10, x1 = w2 - 30, rh = 44, top2 = 22, h2 = top2 + KEYS.length * rh + 4;
     var s2 = svg("svg", { viewBox: "0 0 " + w2 + " " + h2, class: "chart", role: "img", "aria-label": "Position of the selected jurisdictions on each dimension" });
     function X2(v) { return x0 + v * (x1 - x0); }
@@ -2096,7 +2100,7 @@ window.CI_BOOT = function () {
       sel.forEach(function (c) { var g = num(val(c, k)); (groups[g] = groups[g] || []).push(c); });
       Object.keys(groups).forEach(function (g) {
         groups[g].forEach(function (c, j) {
-          var off = (j - (groups[g].length - 1) / 2) * 11;
+          var off = (j - (groups[g].length - 1) / 2) * (groups[g].length > 3 ? 6 : 11);
           var dot = svg("circle", { cx: X2(val(c, k)), cy: y + off, r: 6.5, fill: jurColor(c), stroke: "#fff", "stroke-width": 2 });
           withTip(dot, function () { return [jurName[c] + " · " + keyName(k) + ": " + num(val(c, k)), "Rank " + rankOf(c, k) + " of " + nJ]; });
           dot.style.cursor = "pointer";
@@ -2222,16 +2226,26 @@ window.CI_BOOT = function () {
 
     var groups = [];
     if (S.unit === "all") UNITS.forEach(function (u) { groups.push({ u: u, k: "overall", label: unitById[u].name, click: function () { S.unit = u; redraw(); } }); });
-    else KEYS.forEach(function (k) { groups.push({ u: S.unit, k: k, label: keyShort(k) }); });
+    else KEYS.forEach(function (k) {
+      groups.push({ u: S.unit, k: k, label: keyShort(k), click: function () { var c = host.querySelector(".mech-gap"); if (c) c.scrollIntoView({ behavior: "smooth", block: "start" }); } });
+    });
     host.appendChild(chartHead(S.unit === "all" ? "Law against market: the three pairs" : "Law against market: " + unitById[S.unit].name + ", overall and by dimension",
-      S.unit === "all" ? "The gap is De Jure minus De Facto. Click a pair for its breakdown." : "The gap is De Jure minus De Facto.",
+      S.unit === "all" ? "The gap is De Jure minus De Facto. Click a pair for its breakdown." : "The gap is De Jure minus De Facto. Click a row for the mechanisms behind it.",
       [helpLink("#/methodology/limits", "How to read the gap"),
        dlButton("contestability_law_vs_market.csv", CSV.gapHeader, function () { return CSV.gapRows().filter(function (r) { return units.indexOf(r[0]) >= 0; }); })]));
     host.appendChild(seriesKey(keyItems));
     host.appendChild(pairedBars(groups));
 
     /* gap breakdown by dimension, as a table whose cells lead on */
-    host.appendChild(chartHead("Gap breakdown by dimension", "De Jure minus De Facto, " + DF_NOW + ". Click a figure for the mechanisms behind it."));
+    host.appendChild(chartHead("Gap breakdown by dimension", "De Jure minus De Facto, " + DF_NOW + ". Click a figure for the mechanisms behind it.",
+      [dlButton("contestability_gap_by_dimension.csv", ["unit_id", "pair", "measure", "de_jure_market_level", "de_facto", "gap_de_jure_minus_de_facto"], function () {
+        var out = [];
+        units.forEach(function (u) { KEYS.forEach(function (k) {
+          var a = mVal("de_jure", u, "current", k), b = mVal("de_facto", u, "current", k);
+          out.push([u, unitById[u].name, k, a, b, a !== null && b !== null ? a - b : ""]);
+        }); });
+        return out;
+      })]));
     var t = el("table", "plain gap-table"), hr = el("tr");
     ["Pair", "Overall"].concat(DIMS.map(function (d) { return d + " " + DIM_SHORT[d]; })).forEach(function (x, i) { hr.appendChild(el("th", i ? "num" : null, x)); });
     t.appendChild(hr);
@@ -2375,7 +2389,7 @@ window.CI_BOOT = function () {
     back.className = "btn btn-outline";
     cmpB.type = "button";
     cmpB.addEventListener("click", function () {
-      if (S.jurs.indexOf(code) < 0) { if (S.jurs.length >= 4) S.jurs.pop(); S.jurs.push(code); }
+      if (S.jurs.indexOf(code) < 0) S.jurs.push(code);
       S.cmp = "jur";
       go(exploreHref("compare"));
     });
@@ -2423,6 +2437,8 @@ window.CI_BOOT = function () {
     var ov = el("div", "card");
     targets.overall = ov;
     ov.appendChild(el("h2", null, j.name + " Overall Score, " + DJ_DATE));
+    ov.appendChild(add(el("p", "chart-foot top"), dlButton("contestability_dejure_" + code + ".csv", CSV.dejureHeader, function () { return CSV.dejureRows([code], "overall"); },
+      "Download " + j.name + "'s scores (CSV)")));
     var og = el("div", "overall"), ol = el("div");
     ol.appendChild(el("p", "box-label", "De Jure index"));
     ol.appendChild(scoreBox(v));
@@ -2808,6 +2824,8 @@ window.CI_BOOT = function () {
     }
     c4.appendChild(el("h4", null, "Indicator by indicator"));
     c4.appendChild(el("p", "small muted", "What each indicator observes. An indicator opens its entry in section 2; “Data” opens its scores and evidence."));
+    c4.appendChild(add(el("p", "chart-foot top"), dlButton("contestability_definitions.csv", ["category_id", "category_code", "dimension", "dimension_name", "category", "mechanism_description", "de_facto_indicator"],
+      function () { return D.mechanisms.map(function (m) { return [m.id, m.code, m.dimension, dimById[m.dimension].name, m.name, m.description, m.indicator]; }); }, "Download the definitions (CSV)")));
     var it2 = el("table", "plain ind-list"), ih = el("tr");
     ["Indicator", "What it observes (the mechanism)", "De Jure counterpart", ""].forEach(function (x) { ih.appendChild(el("th", null, x)); });
     it2.appendChild(ih);
@@ -3004,7 +3022,8 @@ window.CI_BOOT = function () {
       interpretation: [ins.spread.text, ins.prevalence.text,
         "Qualifications: a De Jure score records the law as written. It does not record compliance or market outcomes, and the dimensions are weighted equally. " + ins.precision.text],
       additional: function (c) {
-        c.appendChild(chartHead("Where the jurisdictions differ: every jurisdiction on each dimension", "One dot per score; the lowest and highest are named."));
+        c.appendChild(chartHead("Where the jurisdictions differ: every jurisdiction on each dimension", "One dot per score; the lowest and highest are named.",
+          [dlButton("contestability_dejure_index.csv", CSV.indexHeader, function () { return CSV.indexRows().filter(function (r) { return r[1] === "jurisdiction"; }); })]));
         c.appendChild(dimSpread());
         c.appendChild(chartHead("How common is each obligation?", "The " + words(nJ) + " jurisdictions split by their score on each category.",
           [dlButton("contestability_dejure_categories.csv", CSV.dejureHeader, function () { return CSV.dejureRows(CODES, "overall"); })]));
@@ -3035,7 +3054,7 @@ window.CI_BOOT = function () {
           c.appendChild(add(el("div", "table-scroll"), t));
         }
       },
-      data: [["#/explore/compare?type=jur", "Compare jurisdictions", "Pick two to four jurisdictions and compare them dimension by dimension and category by category."],
+      data: [["#/explore/compare?type=jur", "Compare jurisdictions", "Pick two or more jurisdictions and compare them dimension by dimension and category by category."],
              ["#/explore/dejure?view=rank", "De Jure ranking and matrix", "Every jurisdiction, every dimension, all " + D.meta.totalCells + " category scores."],
              ["#/data/downloads?set=dejure", "Download the De Jure data", "Category scores with their three components, legal form and legal basis."]],
       method: ["#/methodology/dejure", "De Jure scoring →"],
@@ -3065,7 +3084,8 @@ window.CI_BOOT = function () {
         "Indicators with too little evidence are recorded as Missing and left out of the index rather than counted as zero, so each index rests on the indicators that could be scored: " +
         listText(UNITS.map(function (u) { return scoredOf(mIdx("de_facto", u, "current")) + " for " + unitById[u].name; })) + "."],
       additional: function (c) {
-        c.appendChild(chartHead("By dimension", "Hollow: " + DF_BASE + ". Filled: " + DF_NOW + "."));
+        c.appendChild(chartHead("By dimension", "Hollow: " + DF_BASE + ". Filled: " + DF_NOW + ".",
+          [dlButton("contestability_defacto_index.csv", CSV.indexHeader, function () { return CSV.indexRows().filter(function (r) { return r[0] === "de_facto"; }); })]));
         c.appendChild(seriesKey(UNITS.map(function (u) { return { label: unitById[u].name, color: UNIT_COLOR[u] }; })));
         c.appendChild(pairDimChart(UNITS, "change", null));
         c.appendChild(el("h3", "pane-title", "Case: " + u1.name + ", the largest increase"));
@@ -3124,10 +3144,12 @@ window.CI_BOOT = function () {
             return l.d + " is highest for " + listText(l.who.map(function (u) { return unitById[u].name; })) + " (" + num(l.v) + ")";
           }).join("; ") + "."));
         c.appendChild(aiP("Google Play is scored on the app-distribution record of the market-level De Jure layer, because the same obligations bind both app stores; it has no " + DF_BASE + " De Jure record."));
-        c.appendChild(chartHead("De Facto by dimension for the three pairs, " + DF_NOW, null));
+        c.appendChild(chartHead("De Facto by dimension for the three pairs, " + DF_NOW, null,
+          [dlButton("contestability_defacto_index.csv", CSV.indexHeader, function () { return CSV.indexRows().filter(function (r) { return r[0] === "de_facto"; }); })]));
         c.appendChild(seriesKey(UNITS.map(function (u) { return { label: unitById[u].name, color: UNIT_COLOR[u], shape: "sq" }; })));
         c.appendChild(pairDims());
-        c.appendChild(chartHead("Law and market over time", "Squares: De Jure at market level. Circles: De Facto. Hollow: " + DF_BASE + ". Filled: latest."));
+        c.appendChild(chartHead("Law and market over time", "Squares: De Jure at market level. Circles: De Facto. Hollow: " + DF_BASE + ". Filled: latest.",
+          [dlButton("contestability_law_vs_market.csv", CSV.gapHeader, CSV.gapRows)]));
         c.appendChild(lawMarketRows(UNITS, ["overall"]));
       },
       data: [["#/explore/compare?type=gap", "De Jure vs. De Facto", "Paired bars and the gap breakdown by dimension and by mechanism."],
@@ -3435,7 +3457,7 @@ window.CI_BOOT = function () {
     var sP = sel("Applicable period", "period", [["", "All periods"], ["dj", "De Jure: law in force, " + DJ_DATE], ["df", "De Facto: " + DF_BASE + " and " + DF_NOW]]);
     var q = el("input");
     q.type = "search";
-    q.placeholder = "Search titles, provisions, record identifiers";
+    q.placeholder = "Search titles and provisions, or a scored observation such as dj:JP:D2.2";
     q.value = F.q;
     q.setAttribute("aria-label", "Search the library");
     q.addEventListener("input", function () { F.q = q.value; shown = 40; draw(); });
@@ -3443,6 +3465,12 @@ window.CI_BOOT = function () {
     bar.appendChild(left);
     host.appendChild(bar);
     var count = el("p", "small muted"), list = el("div", "lib-list"), more = el("p");
+    var hitsNow = [];
+    function obsIds(r) { return r.cats.slice().sort(function (a, b) { return a - b; }).map(function (id) {
+      return r.type === "defacto" ? recordId("df", r.unit, mechById[id], "current") : recordId("dj", r.j, mechById[id], "current"); }); }
+    bar.appendChild(dlButton("contestability_sources.csv", ["record_type", "jurisdiction", "pair", "title", "reference", "url", "scored_observations", "provision_text", "english_translation"], function () {
+      return hitsNow.map(function (r) { return [r.type, r.j, r.unit || "", r.title, r.ref || "", r.url || "", obsIds(r).join(" "), r.excerpt || "", r.translation || ""]; });
+    }, "Download these records (CSV)"));
     add(host, count, list, more);
     host.appendChild(el("h3", "pane-title", "Browse the legal record by jurisdiction"));
     var chips = el("div", "chips");
@@ -3476,6 +3504,7 @@ window.CI_BOOT = function () {
         }
         return true;
       });
+      hitsNow = hits;
       count.textContent = hits.length + " of " + recs.length + " records" + (F.dim || F.cat ? ". Records not tied to an obligation category (full texts, some instruments) are left out by a dimension or category filter." : ".");
       list.textContent = "";
       hits.slice(0, shown).forEach(function (r) {
@@ -3490,6 +3519,16 @@ window.CI_BOOT = function () {
         if (r.excerpt) {
           var d = fold("Provision text", r.translation ? "with English translation" : null, [el("blockquote", null, r.excerpt), r.translation ? el("blockquote", "translation", r.translation) : null]);
           c.appendChild(d);
+        }
+        if (r.type === "defacto" && r.cats.length) {
+          // the coded evidence of the observations this source supports (the database holds no excerpt of the source itself)
+          var ev = r.cats.slice().sort(function (a, b) { return a - b; }).map(function (id) {
+            var it = D.deFacto.items.filter(function (x) { return x.unit === r.unit && x.mechanism === id; })[0];
+            if (!it || !it.evidence) return null;
+            var t = it.evidence.length > 420 ? it.evidence.slice(0, 420).replace(/\s+\S*$/, "") + " …" : it.evidence;
+            return add(el("p", "small"), el("strong", null, mechById[id].code + " " + mechById[id].indicator + ": "), t);
+          }).filter(Boolean);
+          if (ev.length) c.appendChild(fold("Evidence excerpt", "the coded evidence of the observations it supports", ev));
         }
         add(c, obsButtons(r));
         list.appendChild(c);

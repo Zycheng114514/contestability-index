@@ -724,3 +724,8 @@ table.entry-fields th { width: 230px; text-transform: none; letter-spacing: 0; f
 .meth-card .notes-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .version-box .ai-tag { display: inline-block; text-transform: none; letter-spacing: 0.02em; font-size: 0.72rem; }
 @media (max-width: 980px) { .meth-card .notes-grid { grid-template-columns: 1fr; } }
+
+.chart-foot { margin: 10px 0 0; text-align: right; }
+.chart-foot.top { margin: -4px 0 10px; }
+.lib-bar { align-items: flex-start; }
+.lib-bar .ctrl-left { width: auto; flex: 1; }

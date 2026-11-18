@@ -286,6 +286,117 @@
     "noJurisdictionDeFacto": {
       "section": "II.B",
       "text": "A jurisdiction-wide De Facto measure constructed without underlying market-level observations would combine heterogeneous competitive conditions and require an additional weighting rule for markets with different economic importance and measurement coverage."
+    },
+    "definitions": {
+      "section": "II.A, Table II.1",
+      "deJure": "The formal legal and regulatory environment governing competition in a market. It captures the extent to which laws, regulations, and platform obligations create opportunities for rival firms to enter and expand.",
+      "deFacto": "Actual competitive conditions observed in the marketplace. It captures whether rivals can realistically enter, grow, and compete given prevailing technological, economic, and behavioral conditions.",
+      "effective": "The realized ability of rivals to challenge incumbent firms on the merits of their products and services. It reflects the actual competitive opportunities available within a market."
+    },
+    "architecture": {
+      "section": "II.A",
+      "text": "As described in the accompanying Framework Paper, the Contestability Measurement Framework evaluates contestability through four contestability dimensions, each representing a distinct economic mechanism through which competition may be facilitated or restricted. These dimensions are evaluated from two complementary perspectives: De Jure Contestability, which measures whether there are formal laws, regulations, and platform obligations to protect or facilitate competition; De Facto Contestability, which captures whether competition occurs in practice, as reflected in market outcomes and participant behavior. Together, these two types of contestability provide the basis for constructing a baseline Effective Contestability, which measures the extent to which markets are genuinely open to competitive challenge."
+    },
+    "hierarchy": {
+      "section": "II.C.1",
+      "dimension": "A contestability dimension is a broad category of competitive friction. The framework contains four dimensions:",
+      "mechanism": "A contestability mechanism is the economic channel through which competitive opportunities are facilitated or restricted. Examples include reducing default bias, lowering switching costs, enabling rivals to reach users through alternative distribution channels, preventing discriminatory ranking, enabling technical interoperability, and limiting structural advantages arising from exclusive data accumulation or cross-service data combination.",
+      "obligationCategory": "A De Jure obligation category is a standardized type of formal protection, right, restriction, or requirement used to evaluate whether a contestability mechanism is supported by the legal and regulatory framework. Examples include active-choice requirements, default-setting restrictions, anti-steering obligations, prohibitions on self-preferencing, interoperability obligations, data-access rights, and restrictions on cross-service data combination.",
+      "legalBasis": "A De Jure obligation category is the comparative coding category. The specific statute, regulation, article, court order, conduct requirement, or administrative rule establishing the obligation is recorded as its legal basis.",
+      "indicator": "A De Facto indicator is an observable condition or measure used to evaluate whether a contestability mechanism operates in practice. Examples include the design and coverage of a choice screen, the number of steps required to change a default, adoption of alternative distribution channels, the relative visibility of rival services, use of interoperability interfaces, access to business-user data, and the extent of cross-service data combination."
+    },
+    "units": {
+      "section": "II.B",
+      "deJure": "For De Jure Contestability, the primary coding unit is a mechanism–jurisdiction observation at a specified point of time. Each observation evaluates the existence, scope, and enforceability of the formal protections associated with a particular contestability mechanism. This approach provides a systematic overview of the formal regulatory environment and enables comparison across jurisdictions.",
+      "deJureMarket": "For market-specific analysis, the jurisdiction-level coding is restated as a market-jurisdiction level De Jure Contestability measure. This restatement applies the common market definition, identifies the mechanisms relevant to that market, and evaluates whether the jurisdiction’s legal provisions cover the market under assessment. Mechanisms that do not operate within the defined market are treated as not applicable rather than as evidence of low contestability.",
+      "deFacto": "For De Facto Contestability, the primary coding unit is a market–jurisdiction observation at a specified point of time. It evaluates whether the relevant contestability mechanisms operate in practice, as reflected in observed user behavior, rival participation, platform conduct, and technological conditions.",
+      "effective": "Effective Contestability is constructed after the De Jure and De Facto measures have been aligned at the same market, jurisdiction, and observation period. Its unit of observation is therefore a matched market–jurisdiction observation."
+    },
+    "commonScale": {
+      "section": "III.D.2, Table III.1",
+      "0": "The relevant protection, right, or market condition is absent or highly restrictive.",
+      "0.5": "The protection or condition is present only partially, applies within meaningful limitations, or remains subject to material legal, technical, commercial, or behavioral frictions.",
+      "1": "The formal protection or market condition is comprehensive and effectively supports competitive challenges."
+    },
+    "scoresNotWeights": {
+      "section": "III.D.3",
+      "text": "The score assigned to an obligation category or indicator reflects the observed degree of contestability on that item. It does not represent the item’s relative importance within the framework. The relative contribution of measurement items, mechanisms, and dimensions is determined through the aggregation and weighting procedures in Section III.E. Coders should therefore not use the scoring scale to give additional importance to an item they consider economically significant."
+    },
+    "deterministic": {
+      "section": "III.D.4",
+      "text": "The three-point scale is intentionally designed to balance transparency, consistency, and practicality. Because many institutional arrangements and market conditions cannot be measured with precision, a limited set of discrete scores reduces subjectivity while remaining sufficiently flexible to capture meaningful differences in contestability."
+    },
+    "aggregationDimension": {
+      "section": "III.E.1",
+      "text": "Within each contestability dimension, obligation category, or indicator scores are aggregated using an unweighted arithmetic mean. Unless otherwise specified, each applicable indicator contributes equally to the dimension score. Indicators deemed not applicable to the market being evaluated are excluded from the aggregation."
+    },
+    "aggregationOverall": {
+      "section": "III.E.2",
+      "text": "The overall De Jure and De Facto measures are obtained by aggregating the four dimension scores. The construction of the Effective Contestability measure is presented separately in Section VI."
+    },
+    "weighting": {
+      "section": "III.E.3",
+      "text": "Unless specified, equal weighting is adopted as the baseline specification to maximize transparency, replicability, and comparability across markets, jurisdictions, and time. It provides an easily interpretable benchmark while avoiding arbitrary assumptions regarding the relative importance of different contestability mechanisms.",
+      "marketSpecific": "The framework recognizes that the relative importance of contestability mechanisms may differ across digital markets. For instance, interoperability may be particularly important in messaging services, while side-loading may play a larger role in app stores. These differences reflect the economic characteristics of individual markets rather than deficiencies in the measurement framework."
+    },
+    "notApplicableVsMissing": {
+      "section": "III.G.1",
+      "text": "Indicators that are not applicable to a particular market should be distinguished from indicators for which relevant evidence is unavailable. An indicator may be inapplicable because the corresponding contestability mechanism does not exist in the market being evaluated (e.g., app store distribution indicators for online search). Such indicators are excluded from aggregation as described in Section III.E. However, missing information reflects an evidence limitation and should be documented rather than interpreted as evidence of low contestability."
+    },
+    "missingInformation": {
+      "section": "III.G.2",
+      "text": "Missing information should be handled conservatively. The absence of evidence should not be interpreted as evidence that a contestability mechanism is absent. When an indicator cannot be scored due to insufficient information, it should be recorded as Missing rather than assigned a numerical value."
+    },
+    "codingRecord": {
+      "section": "III.D.1",
+      "text": "The documentation must allow another researcher to trace the reported score to the underlying evidence and reproduce the coding decision. The Coding Handbook and supporting database should preserve this audit trail, including the original source, processed evidence, coding assessment, review, and revision history."
+    },
+    "marketRationale": {
+      "section": "III.C.1",
+      "text": "Evidence availability and quality were the main determinants in choosing these markets. Both markets have been the subject of sustained regulatory activity under the DMA and under earlier competition proceedings in the European Union and the United States, and that activity has produced public documentation granular enough to score at the indicator level, specific enough to attribute to a named gatekeeper, and dated closely enough to support comparison between a pre-DMA baseline and a post-DMA observation. The sources include Commission non-compliance and specification decisions, gatekeeper compliance reports, published fee schedules and developer documentation, national competition and data protection authority actions, and independent measurement of traffic and adoption. Few other digital markets currently offer that combination."
+    },
+    "deJureObjective": {
+      "section": "IV.A",
+      "text": "The De Jure Contestability Index measures the formal legal, regulatory, and institutional conditions governing competition in digital platform markets. It evaluates the extent to which laws, regulations, and platform obligations create opportunities for rivals to enter, expand, and challenge incumbent firms.",
+      "notCompliance": "The objective of the De Jure Contestability is not to assess whether competition actually occurs, but whether the legal and regulatory framework permits and facilitates competition. Accordingly, the measure captures the existence and scope of formal contestability provisions, irrespective of whether those provisions are fully implemented or effective in practice. The realized market conditions resulting from these institutional arrangements are evaluated separately through De Facto Contestability (Chapter 5)."
+    },
+    "deJureFactors": {
+      "section": "IV.C",
+      "existence": "whether the relevant protection or obligation is present in the legal framework",
+      "scope": "the range of firms, services, or activities covered by the provision",
+      "enforceability": "the extent to which the provision is supported by credible regulatory oversight or enforcement mechanisms"
+    },
+    "deJureScale": {
+      "section": "IV.C",
+      "0": "No contestability protection exists.",
+      "0.5": "Partial or limited contestability protection exists. Protections may apply only to specific firms, services, or circumstances.",
+      "1": "Strong and comprehensive contestability protection exists and applies broadly within the relevant market."
+    },
+    "deFactoObjective": {
+      "section": "V.A",
+      "text": "Unlike De Jure Contestability, De Facto Contestability measures how open a market is and whether the four mechanisms of contestability are working in practice. It captures observed competitive conditions in the digital markets. It is observable manifestations of contestability rather than market outcomes."
+    },
+    "deFactoSelection": {
+      "section": "V.C",
+      "observability": "whether the indicator can be measured using observed evidence",
+      "representativeness": "whether the indicator accurately reflects the intended contestability mechanisms",
+      "comparability": "whether the indicator can be measured consistently across jurisdictions, markets, and time"
+    },
+    "deFactoFriction": {
+      "section": "V.C",
+      "text": "Fees, warning screens, multi-step procedures, single-presentation prompts, withheld data, and unverified self-reporting all may lead to this score"
+    },
+    "deFactoEvidence": {
+      "section": "V.C",
+      "text": "Observable evidence will be drawn from a variety of sources, including platform transparency reports, regulatory monitoring, third-party market analytics, industry surveys, developer documentation, independent technical audits, structured user experiments, and publicly available datasets. The choice of data source depends on the characteristics of the relevant digital market and the availability of reliable information. More details can be found in the Coding Handbook."
+    },
+    "effectiveBaseline": {
+      "section": "VI.B",
+      "text": "Because De Jure and De Facto Contestability capture complementary dimensions of market openness, the baseline specification constructs the Effective Contestability Index as the equally weighted average of the two measures."
+    },
+    "effectiveInterpretation": {
+      "section": "VI.C",
+      "text": "Effective Contestability provides a convenient summary of contestability but should not replace analysis of the underlying De Jure and De Facto measures. Markets with similar Effective Contestability scores may exhibit substantially different institutional environments and market outcomes."
     }
   }
 }

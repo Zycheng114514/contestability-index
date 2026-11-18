@@ -62,7 +62,7 @@
     rows(db, "select * from assessments where layer = 'de_jure' and level = 'jurisdiction'").forEach(function (a) {
       var binding = ["existence", "scope", "enforceability"].filter(function (k) { return a[k] === a.score; });
       cells[a.mechanism_id + "|" + a.jurisdiction] = {
-        score: a.score, existence: a.existence, scope: a.scope, enforceability: a.enforceability, binding: binding,
+        id: a.assessment_id, score: a.score, existence: a.existence, scope: a.scope, enforceability: a.enforceability, binding: binding,
         factor_rationale: a.rationale || "", legal_form: a.legal_form_label || "", legal_form_code: a.legal_form || "",
         instrument_basis: a.instrument_basis || "", legal_basis_full: a.basis || "", market_scope: a.market_scope || "",
         evidence_notes: a.evidence_notes || "", pipeline: a.pipeline || "", evidence_date: a.evidence_date || ""
@@ -86,7 +86,7 @@
     // ---------------------------------------------------------------- units, market-level indices
     var units = rows(db, "select * from units").map(function (u) {
       return { id: u.unit_id, name: UNIT_NAMES[u.unit_id] || u.service, service: u.service, gatekeeper: u.gatekeeper,
-               market: u.market, designationDate: u.designation_date };
+               market: u.market, jurisdiction: u.jurisdiction, designationDate: u.designation_date };
     }).sort(function (a, b) { return UNIT_ORDER.indexOf(a.id) - UNIT_ORDER.indexOf(b.id); });
     var periods = {};
     rows(db, "select * from periods").forEach(function (p) { periods[p.layer + "|" + p.level + "|" + p.period] = p; });
@@ -115,6 +115,7 @@
                                          confidence: a.confidence || "", evidence: a.rationale || "",
                                          sources: links[k] || [] };
       it[a.period === "baseline" ? "pre" : "post"] = a.score;
+      it[a.period === "baseline" ? "preId" : "postId"] = a.assessment_id;
     });
     var items = Object.keys(byKey).map(function (k) {
       var it = byKey[k];
@@ -164,7 +165,7 @@
     });
     var marketDeJure = rows(db, "select * from assessments where layer = 'de_jure' and level = 'market' " +
                                 "order by unit_id, period desc, mechanism_id").map(function (r) {
-      return { unit: r.unit_id, period: r.period, observed: r.observed, mechanism: r.mechanism_id, score: r.score,
+      return { id: r.assessment_id, unit: r.unit_id, period: r.period, observed: r.observed, mechanism: r.mechanism_id, score: r.score,
                existence: r.existence, scope: r.scope, enforceability: r.enforceability, provision: r.basis,
                form: r.legal_form, applicability: r.applicability, hook: r.market_hook, extract: r.verbatim_extract,
                rationale: r.rationale, note: r.record_note || "" };

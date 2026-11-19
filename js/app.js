@@ -107,10 +107,9 @@ window.CI_BOOT = function () {
   function scrollToEl(node) { if (node) node.scrollIntoView({ behavior: "smooth", block: "start" }); }
 
   /* ------------------------------------------------------------ the score scale
-     One hue, light to dark, built on KGI blue (#003da5). The WJP site's magenta-to-teal ramp was
-     [[0,"#d40276"],[0.103,"#d40276"],[0.2217,"#ea1813"],[0.3842,"#f19d4b"],[0.5,"#f6c600"],[0.6768,"#adc493"],
-      [0.7758,"#6a9e89"],[0.8865,"#125459"],[0.9699,"#003632"],[1,"#003632"]]; swapping it back is this one line. */
-  var STOPS = [[0, "#c9d8f3"], [0.25, "#93b0e8"], [0.5, "#5583d6"], [0.75, "#1f56bd"], [0.88, "#003da5"], [1, "#0c2a66"]];
+     One hue, light to dark, ending at KGI blue (#003da5). Until 2026-11-18 the ramp went on to a navy (#0c2a66),
+     which read as black blocks in the tables. */
+  var STOPS = [[0, "#d6e0f4"], [0.25, "#b3c5ea"], [0.5, "#86a3dc"], [0.75, "#4c76c6"], [1, "#003da5"]];
   var GRADIENT = "linear-gradient(90deg, " + STOPS.map(function (s) {
     return s[1] + " " + (s[0] * 100).toFixed(2) + "%";
   }).join(", ") + ")";
@@ -127,17 +126,17 @@ window.CI_BOOT = function () {
     return rgbOf(STOPS[STOPS.length - 1][1]);
   }
   function scoreColor(v) {
-    if (v === null || v === undefined) return "#e8e8e8";
+    if (v === null || v === undefined) return "#ecebe8";
     return "rgb(" + scoreRgb(v).join(",") + ")";
   }
-  // Text on a score fill: white on the dark ends of the scale, near-black on the light middle (orange to sage).
+  // Text on a score fill: white on the dark end of the scale, near-black on the light end.
   function inkOn(v) {
     if (v === null || v === undefined) return "#26262b";
     var c = scoreRgb(v).map(function (x) {
       x /= 255;
       return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
     });
-    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] > 0.18 ? "#1d1d22" : "#ffffff";
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] > 0.2 ? "#1d1d22" : "#ffffff";
   }
   function paint(node, v) { node.style.background = scoreColor(v); node.style.color = inkOn(v); return node; }
 
@@ -160,7 +159,7 @@ window.CI_BOOT = function () {
   var SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#8e5bd0", "#d6457f", "#2ba9bd", "#7a8794", "#8a5a2b"];
   var UNIT_COLOR = {};
   UNITS.forEach(function (u, i) { UNIT_COLOR[u] = SERIES[i]; });
-  var LAW = "#151515";  // De Jure marks in the law-against-market charts
+  var LAW = "#4a4a4a";  // De Jure marks in the law-against-market charts
   var nM = D.mechanisms.length, nJ = CODES.length, nD = DIMS.length, nU = UNITS.length;
   var DJ_DATE = month(D.meta.evidenceDate);
   var DF_NOW = month((D.periods["de_facto|market|current"] || {}).observed);
@@ -237,7 +236,7 @@ window.CI_BOOT = function () {
       nodes.forEach(function (n) { c.appendChild(n); });
       g.appendChild(c);
     }
-    col("Research team", [el("p", null, "Zhiyang Cheng, Tracy Xu and Amr Yakout"),
+    col("Research team", [el("p", null, "Tracy Xu, Amr Yakout and Zhiyang Cheng"),
                           el("p", null, "Knight-Georgetown Institute, Georgetown University"),
                           add(el("p"), link("#/about", "About the project"))]);
     col("Contact", [tbdP("Contact address for questions about the data.")]);
@@ -247,9 +246,8 @@ window.CI_BOOT = function () {
     col("Licence", [tbdP("Licence for the data and the site.")]);
     f.appendChild(g);
     var p = el("p", "foot-note");
-    add(p, "Preliminary preview. Every figure is computed in your browser from the project database, ",
-        link(D.meta.dbUrl, "contestability.db"), " (SQLite, built " + D.meta.built + "). ",
-        link("#/data/docs", "Version and observation dates"), ".");
+    add(p, "Data: ", link(D.meta.dbUrl, "contestability.db"), " (SQLite, built " + D.meta.built + ") · ",
+        link("#/data/docs", "Version and observation dates"));
     f.appendChild(p);
   })();
   var menuBtn = $(".menu-btn"), links = $("#subnav-links");
@@ -286,7 +284,7 @@ window.CI_BOOT = function () {
     node.addEventListener("blur", ttHide);
   }
 
-  // The dark card shown on the map and the ranking: the De Jure score, the rank, and the four dimensions, with
+  // The card shown on the map and the ranking: the De Jure score, the rank, and the four dimensions, with
   // the De Facto observations beside them where they exist (the three EU gatekeeper-market pairs).
   function hoverCard(code, key, place) {
     var a = D.aggregates[code], v = val(code, key);
@@ -434,10 +432,9 @@ window.CI_BOOT = function () {
     return s;
   }
 
-  // Ranking bars. opts.compare adds a button per row that puts the jurisdiction into the comparison workspace.
-  function rankingList(key, opts) {
-    opts = opts || {};
-    var host = el("div", "rank-list" + (opts.compare ? " with-cmp" : ""));
+  // Ranking bars. A row opens the jurisdiction's profile.
+  function rankingList(key) {
+    var host = el("div", "rank-list");
     rankedBy(key).forEach(function (code) {
       var v = val(code, key);
       var line = el("div", "rank-line");
@@ -456,7 +453,6 @@ window.CI_BOOT = function () {
       withTip(row, function () { return hoverCard(code, key); }, true);
       row.addEventListener("click", function () { go("#/jurisdiction/" + code); });
       line.appendChild(row);
-      if (opts.compare) line.appendChild(compareToggle(code));
       host.appendChild(line);
     });
     return host;
@@ -540,7 +536,7 @@ window.CI_BOOT = function () {
       add(k, sw, p[1]);
       lg.appendChild(k);
     });
-    if (withPipeline) lg.appendChild(el("span", null, "• in a cell: announced, not yet in force (scores 0)"));
+    if (withPipeline) lg.appendChild(add(el("span", "pip-key"), el("i", "pip"), "in a cell: announced, not yet in force (scores 0)"));
     return lg;
   }
 
@@ -1010,7 +1006,7 @@ window.CI_BOOT = function () {
         var tr = el("tr");
         cols.forEach(function (c) {
           var v = c.get(r), td = el("td", c.score ? "sc" : c.num ? "num" : null);
-          if (c.score && v !== null && v !== undefined) { paint(td, v); td.textContent = c.fmt ? c.fmt(v, r) : num(v); }
+          if (c.score && v !== null && v !== undefined) td.appendChild(paint(el("span", "pill-inline", c.fmt ? c.fmt(v, r) : num(v)), v));
           else {
             var f = c.fmt ? c.fmt(v, r) : (v === null || v === undefined || v === "" ? "—" : String(v));
             if (typeof f === "string") td.textContent = f; else td.appendChild(f);
@@ -1104,49 +1100,6 @@ window.CI_BOOT = function () {
             : layer === "djm" ? (D.periods["de_jure|market|" + period] || {}).observed
             : (D.periods["de_facto|market|" + period] || {}).observed;
     return layer + ":" + who + ":" + m.code + ":" + (obs || period);
-  }
-
-  /* ------------------------------------------------------------ comparison selection */
-  var cmpButtons = [];
-  function compareToggle(code) {
-    var b = el("button", "cmp-btn");
-    b.type = "button";
-    b.dataset.code = code;
-    b.addEventListener("click", function (e) {
-      e.stopPropagation();
-      var i = S.jurs.indexOf(code);
-      if (i >= 0) S.jurs.splice(i, 1); else S.jurs.push(code);
-      syncCompare();
-    });
-    cmpButtons.push(b);
-    paintToggle(b);
-    return b;
-  }
-  function paintToggle(b) {
-    var on = S.jurs.indexOf(b.dataset.code) >= 0, full = false;
-    b.textContent = on ? "✓ Compare" : "+ Compare";
-    b.classList.toggle("on", on);
-    b.disabled = full;
-    b.title = on ? "Remove from the comparison" : "Add to the comparison";
-    b.setAttribute("aria-pressed", on ? "true" : "false");
-    b.setAttribute("aria-label", (on ? "Remove " : "Add ") + jurName[b.dataset.code] + (on ? " from" : " to") + " the comparison");
-  }
-  function syncCompare() {
-    cmpButtons = cmpButtons.filter(function (b) { return document.body.contains(b); });
-    cmpButtons.forEach(paintToggle);
-    Array.prototype.forEach.call(document.querySelectorAll(".cmp-tray"), function (t) { t.refresh(); });
-  }
-  // "Compare selected (n)": the jurisdictions picked so far, and the way into the comparison workspace.
-  function compareTray() {
-    var a = el("a", "btn btn-outline cmp-tray");
-    a.refresh = function () {
-      a.textContent = "Compare selected (" + S.jurs.length + ") →";
-      a.href = "#/explore/compare?type=jur&j=" + S.jurs.join(",");
-      a.title = S.jurs.map(function (c) { return jurName[c]; }).join(", ");
-    };
-    a.addEventListener("click", function () { S.cmp = "jur"; });
-    a.refresh();
-    return a;
   }
 
   /* ------------------------------------------------------------ small controls */
@@ -1350,7 +1303,7 @@ window.CI_BOOT = function () {
   /* ------------------------------------------------------------ citation and version */
   function citeText() {
     return {
-      paper: "Cheng, Zhiyang, Tracy Xu and Amr Yakout. 2026. “Beyond Market Concentration: Measuring Contestability in Digital Markets.” Working paper, July 2026."
+      paper: "Zhiyang Cheng, Tracy Xu and Amr Yakout. 2026. “Beyond Market Concentration: Measuring Contestability in Digital Markets.” Working paper, July 2026."
     };
   }
   function openCite() {
@@ -1378,7 +1331,7 @@ window.CI_BOOT = function () {
   function versionBox() {
     var b = el("div", "version-box");
     b.appendChild(add(el("div"), el("span", null, "Version number"), tbdP("Version numbering.", "inline")));
-    [["Database build", VERSION + " (preliminary)"], ["De Jure, jurisdiction level", "Law in force, " + DJ_DATE],
+    [["Database build", VERSION], ["De Jure, jurisdiction level", "Law in force, " + DJ_DATE],
      ["De Jure, market level", month((D.periods["de_jure|market|baseline"] || {}).observed) + " and " + month((D.periods["de_jure|market|current"] || {}).observed)],
      ["De Facto", DF_BASE + " (before the DMA obligations applied) and " + DF_NOW]].forEach(function (x) {
       b.appendChild(add(el("div"), el("span", null, x[0]), el("b", null, x[1])));
@@ -1387,7 +1340,9 @@ window.CI_BOOT = function () {
   }
   (function citeButton() {
     var b = $("#cite-btn");
-    if (b) b.addEventListener("click", function (e) { e.preventDefault(); openCite(); });
+    if (!b) return;
+    b.classList.add("opens-panel");   // a click outside the panel closes it, unless it comes from a control that opens it
+    b.addEventListener("click", function (e) { e.preventDefault(); openCite(); });
   })();
 
   /* ------------------------------------------------------------ quoted passages and computed statements */
@@ -1541,7 +1496,7 @@ window.CI_BOOT = function () {
     hin.appendChild(el("p", "lede", "A framework for comparing legal requirements and observed market conditions across jurisdictions and digital markets."));
     var cta = el("div", "hero-cta"), a1 = link("#/explore/dejure", "Explore the Index"), a2 = link("#/methodology", "How it works");
     a1.className = "btn btn-fill";
-    a2.className = "btn btn-ghost";
+    a2.className = "btn btn-outline";
     add(cta, a1, a2);
     hin.appendChild(cta);
     hero.appendChild(hin);
@@ -1567,11 +1522,6 @@ window.CI_BOOT = function () {
       cov.appendChild(a);
     });
     right.appendChild(cov);
-    var dates = link("#/data/docs", "");
-    dates.className = "cov-dates";
-    add(dates, el("span", "l", "Observation dates"),
-        el("span", null, "De Jure: law in force, " + DJ_DATE + " · De Facto: " + DF_BASE + " and " + DF_NOW + " · " + VERSION));
-    right.appendChild(dates);
     add(w1, left, right);
     s1.appendChild(w1);
     app.appendChild(s1);
@@ -1579,12 +1529,11 @@ window.CI_BOOT = function () {
     /* two measurement layers, side by side */
     var s2 = section("alt", "layers"), w2 = el("div", "wrap");
     head(w2, "Two measurement layers", "De Jure and De Facto");
-    var lg = el("div", "layer-grid"), ins = insights();
-    var rk = rankedBy("overall");
+    var lg = el("div", "layer-grid");
     function layerCard(title, tag, defn, facts, href, go2, methHref) {
       var c = el("div", "layer-card");
       add(c, el("h3", null, title), el("p", "tag", tag));
-      if (defn) c.appendChild(quoteP(defn, MANSRC + ", section " + MAN.definitions.section));
+      c.appendChild(aiP(defn, "layer-def"));
       var f = el("div", "mfacts");
       facts.forEach(function (x) { add(f, el("span", null, x[0]), el("b", null, x[1])); });
       c.appendChild(f);
@@ -1594,14 +1543,15 @@ window.CI_BOOT = function () {
       c.appendChild(row);
       return c;
     }
-    var defs = MAN.definitions || {};
-    lg.appendChild(layerCard("De Jure", "What the legal framework requires", defs.deJure,
-      [["Unit", nJ + " jurisdictions × " + nM + " obligation categories"], ["Observed", DJ_DATE],
-       ["Index range", span2(val(rk[rk.length - 1], "overall"), val(rk[0], "overall"))]],
+    lg.appendChild(layerCard("De Jure", "What the legal framework requires",
+      "De Jure scores describe the law as written. For each jurisdiction they record how far its laws and regulations require large digital platforms " +
+      "to leave room for rivals to enter and expand.",
+      [["Unit", nJ + " jurisdictions × " + nM + " obligation categories"], ["Observed", DJ_DATE]],
       "#/explore/dejure", "Explore legal scores", "#/methodology/dejure"));
-    lg.appendChild(layerCard("De Facto", "What is observed in practice", defs.deFacto,
-      [["Unit", nU + " gatekeeper–market pairs × " + nM + " indicators"], ["Observed", DF_BASE + " and " + DF_NOW],
-       ["Index range, " + DF_NOW, span2(ins.gap.dfLo, ins.gap.dfHi)]],
+    lg.appendChild(layerCard("De Facto", "What is observed in practice",
+      "De Facto scores describe the market as observed. For each gatekeeper and market they record whether rivals can in practice enter, grow and compete, " +
+      "given the technical, economic and behavioural conditions in that market.",
+      [["Unit", nU + " gatekeeper–market pairs × " + nM + " indicators"], ["Observed", DF_BASE + " and " + DF_NOW]],
       "#/explore/defacto", "Explore market scores", "#/methodology/defacto"));
     w2.appendChild(lg);
     s2.appendChild(w2);
@@ -1609,8 +1559,7 @@ window.CI_BOOT = function () {
 
     /* framework preview */
     var s3 = section(null, "framework"), w3 = el("div", "wrap");
-    head(w3, "Understanding the measurement", "Four dimensions → sixteen obligation categories → scored observations → aggregated indices");
-    w3.appendChild(hierarchyMini());
+    head(w3, "Measurement framework", "Understanding the measurement");
     var flow = el("div", "flow four");
     [["Dimension", "A broad category of competitive friction. There are " + words(nD) + "."],
      ["Obligation category and indicator", "Each of the " + words(nM) + " mechanisms has one legal category (De Jure) and one observable indicator (De Facto)."],
@@ -1619,7 +1568,7 @@ window.CI_BOOT = function () {
       flow.appendChild(add(el("div", "st"), el("b", null, x[0]), x[1]));
     });
     w3.appendChild(flow);
-    w3.appendChild(el("p", "small muted", "The four steps above are an [AI generated] summary of the Methodology Manual, sections II.C and III.E."));
+    w3.appendChild(hierarchyMini());
     var vf = link("#/methodology/framework", "View measurement framework →");
     vf.className = "btn btn-outline";
     w3.appendChild(add(el("p"), vf));
@@ -1660,29 +1609,43 @@ window.CI_BOOT = function () {
   }
 
   /* ========================================================== TAB 2: EXPLORE DATA */
-  // The bar under the navigation: the three views, the controls of the current view, and the score scale.
+  // The bar under the navigation, in two levels. First level: the three views (De Jure, De Facto, Compare) and the
+  // score scale. Second level, set under the open view and named after it: the options that belong to that view.
+  // tools: nodes, or [label, node] pairs.
+  var XVIEWS = [["dejure", "De Jure"], ["defacto", "De Facto"], ["compare", "Compare"]];
   function exploreBar(active, tools) {
-    var bar = el("div", "ctrlbar"), inn = el("div", "wrap ctrlbar-in"), l = el("div", "ctrl-left");
-    var tabs = el("div", "seg sub-tabs");
+    var bar = el("div", "ctrlbar xbar"), top = el("div", "wrap ctrl-top"), tabs = el("div", "xtabs");
     tabs.setAttribute("role", "group");
     tabs.setAttribute("aria-label", "Explore Data views");
-    [["dejure", "De Jure"], ["defacto", "De Facto"], ["compare", "Compare"]].forEach(function (t) {
+    var name = "";
+    XVIEWS.forEach(function (t) {
       var b = el("button", null, t[1]);
       b.type = "button";
       b.setAttribute("aria-pressed", t[0] === active ? "true" : "false");
       b.addEventListener("click", function () { go(exploreHref(t[0])); });
+      if (t[0] === active) name = t[1];
       tabs.appendChild(b);
     });
-    l.appendChild(tabs);
-    (tools || []).forEach(function (n) { if (n) l.appendChild(n); });
-    add(inn, l, scaleLegend(active === "dejure" ? "Pro-contestability obligations in law" : "Contestability score"));
-    bar.appendChild(inn);
+    add(top, tabs, scaleLegend(active === "dejure" ? "Pro-contestability obligations in law" : "Contestability score"));
+    bar.appendChild(top);
+    var subBand = el("div", "ctrl-sub"), sub = el("div", "wrap xsub");
+    sub.setAttribute("role", "group");
+    sub.setAttribute("aria-label", name + " options");
+    sub.appendChild(add(el("span", "xsub-of"), name, el("span", "sep", "›")));
+    (tools || []).forEach(function (n) {
+      if (!n) return;
+      var c = el("span", "xctl");
+      if (Array.isArray(n)) add(c, el("span", "xctl-label", n[0]), n[1]); else c.appendChild(n);
+      sub.appendChild(c);
+    });
+    subBand.appendChild(sub);
+    bar.appendChild(subBand);
     return bar;
   }
   // Which data the reader is looking at: version and observation dates, with the citation one click away.
   function dataLine(extra) {
     var p = el("p", "dataline wrap");
-    add(p, el("b", null, VERSION + " (preliminary)"), " · De Jure: law in force, " + DJ_DATE + " · De Facto: " + DF_BASE + " and " + DF_NOW + " · ");
+    add(p, el("b", null, VERSION), " · De Jure: law in force, " + DJ_DATE + " · De Facto: " + DF_BASE + " and " + DF_NOW + " · ");
     var c = el("button", "linkish", "Cite");
     c.type = "button";
     c.addEventListener("click", function (e) { e.stopPropagation(); openCite(); });
@@ -1704,7 +1667,7 @@ window.CI_BOOT = function () {
   function pageDeJure(app) {
     document.title = "Explore Data: De Jure · The Contestability Index";
     var viewSeg = segmented([["map", "Map"], ["rank", "Ranking"]], S.view, function (v) { S.view = v; drawStage(); sync(); }, "Map or ranking");
-    app.appendChild(exploreBar("dejure", [viewSeg, compareTray()]));
+    app.appendChild(exploreBar("dejure", [["View", viewSeg]]));
     app.appendChild(dataLine());
 
     var grid = el("div", "explore-grid"), list = el("div", "dimlist"), pane = el("div", "rankpane");
@@ -1740,7 +1703,7 @@ window.CI_BOOT = function () {
       stageHead.appendChild(chartHead(
         (S.view === "map" ? "Map of " : "Jurisdictions ranked by ") + measure() + ", " + DJ_DATE,
         S.view === "map" ? "Hover over a jurisdiction for its scores, click to open its profile. Grey areas have not been assessed."
-                         : "Click a jurisdiction to open its profile. “+ Compare” puts it into the comparison workspace.",
+                         : "Hover over a jurisdiction for its scores, click to open its profile.",
         [helpLink("#/methodology/" + (S.dim === "overall" ? "dejure" : S.dim), "How " + measure() + " is measured"),
          dlButton("contestability_dejure_" + S.dim + ".csv", CSV.dejureHeader, function () { return CSV.dejureRows(CODES, S.dim); })]));
       if (S.view === "map") {
@@ -1749,19 +1712,9 @@ window.CI_BOOT = function () {
         ms.appendChild(world);
         stage.appendChild(ms);
         stage.appendChild(el("p", "small muted map-note", "Germany carries its own score; the other 26 EU member states carry the EU score."));
-        // every jurisdiction with its score: a second way to its profile, and the Compare action
-        var chips = el("div", "jur-chips");
-        rankedBy(S.dim).forEach(function (c) {
-          var v = val(c, S.dim), box = el("div", "jur-chip"), a = link("#/jurisdiction/" + c, "");
-          add(a, paint(el("span", "sw", num(v)), v), el("span", "nm", jurName[c]));
-          withTip(a, function () { return hoverCard(c, S.dim); }, true);
-          add(box, a, compareToggle(c));
-          chips.appendChild(box);
-        });
-        stage.appendChild(chips);
       } else {
         world = null;
-        stage.appendChild(rankingList(S.dim, { compare: true }));
+        stage.appendChild(rankingList(S.dim));
       }
     }
     function drawMatrix() {
@@ -1928,7 +1881,7 @@ window.CI_BOOT = function () {
     wrap.appendChild(t);
     return wrap;
   }
-  // How to read the cells; the meaning of each score is the Methodology Manual's own wording.
+  // How to read the cells.
   function deFactoKey(period) {
     var scale = MAN.deFactoScale, key = el("div", "scale-list");
     if (period === "change") {
@@ -1953,7 +1906,7 @@ window.CI_BOOT = function () {
         el("span", "ind na sample", "n/a"), el("span", null, "Not applicable. " + (scale && scale["Not Applicable"] ? scale["Not Applicable"] : "Left out of the index.")));
     var box = el("div");
     box.appendChild(key);
-    if (scale) box.appendChild(add(el("p", "small muted"), "Score definitions: " + MANSRC + ", section " + scale.section + ". ", link("#/methodology/defacto", "De Facto scoring rules →")));
+    box.appendChild(add(el("p", "small"), link("#/methodology/defacto", "De Facto scoring rules →")));
     return box;
   }
 
@@ -1984,7 +1937,7 @@ window.CI_BOOT = function () {
     document.title = "Explore Data: De Facto · The Contestability Index";
     var perSeg = segmented([["baseline", DF_BASE], ["current", DF_NOW], ["change", "Change"]], S.period, function (v) { S.period = v; draw(); }, "Observation period");
     var dsel = dimSelect(function () { S.cat = null; draw(); });
-    app.appendChild(exploreBar("defacto", [perSeg, dsel]));
+    app.appendChild(exploreBar("defacto", [["Period", perSeg], ["Dimension", dsel]]));
     app.appendChild(dataLine());
     var s = section(null, "defacto"), w = el("div", "wrap");
     head(w, "De Facto", "What is observed in " + words(nU) + " gatekeeper–market pairs",
@@ -2344,7 +2297,6 @@ window.CI_BOOT = function () {
       head(hd, "Compare", TITLES[S.cmp][0], TITLES[S.cmp][1] + ". Every mark leads to its detailed score and evidence; the selection is kept when you move to another view.");
       ({ jur: cmpJurisdictions, mkt: cmpMarkets, gap: cmpGap })[S.cmp](body, draw);
       setAddress("/explore/compare", S.cmp === "jur" ? ["type", "j"] : S.cmp === "mkt" ? ["type", "units"] : ["type", "unit", "cat"]);
-      syncCompare();
     }
     draw();
     if (S.cmp === "gap" && S.cat !== null && S.unit !== "all") {
@@ -2670,8 +2622,7 @@ window.CI_BOOT = function () {
       return c;
     }
     main.appendChild(el("h1", "pname", "Methodology"));
-    main.appendChild(aiP(["How the index is built, from the definition of contestability to a single score. Passages in quotation blocks are quoted from the " +
-      MANSRC + " or the working paper; examples and figures are read from the database. Every definition links to the data it produces, and every score in ",
+    main.appendChild(aiP(["How the index is built, from the definition of contestability to a single score. Every definition links to the data it produces, and every score in ",
       link("#/explore/dejure", "Explore Data"), " links back to its entry here."], "sec-intro"));
 
     /* ---- 1. Concept & Scope */
@@ -2724,7 +2675,6 @@ window.CI_BOOT = function () {
       fr.appendChild(add(el("div", "st"), el("b", null, x[0]), x[1] ? "“" + cap(x[1]) + ".”" : ""));
     });
     c3.appendChild(fr);
-    if (ff.section) c3.appendChild(el("p", "small muted", "Factor definitions: " + MANSRC + ", section " + ff.section + "."));
     var hf = HB.deJureFactors;
     if (hf) {
       c3.appendChild(el("h4", null, "Scoring criteria (expand a factor)"));
@@ -2736,7 +2686,7 @@ window.CI_BOOT = function () {
         [[0, "0"], [0.5, "0.5"], [1, "1"]].forEach(function (sc) {
           t.appendChild(add(el("tr"), add(el("td"), paint(el("span", "pill-inline", glyph(sc[0])), sc[0])), el("td", null, "“" + f[sc[1]] + "”")));
         });
-        c3.appendChild(fold(x[0], f.question, [t, el("p", "small muted", "Criteria: " + HBSRC + ", section " + hf.section + ".")]));
+        c3.appendChild(fold(x[0], f.question, [t]));
       });
     }
     c3.appendChild(el("h4", null, "The 0 / ½ / 1 rubric"));
@@ -2746,7 +2696,6 @@ window.CI_BOOT = function () {
       rt.appendChild(add(el("tr"), add(el("td"), paint(el("span", "pill-inline", glyph(x[0])), x[0])), el("td", null, ds[x[1]] ? "“" + ds[x[1]] + "”" : "")));
     });
     c3.appendChild(rt);
-    if (ds.section) c3.appendChild(el("p", "small muted", "Rubric: " + MANSRC + ", section " + ds.section + "."));
     c3.appendChild(el("h4", null, "From three factors to a category score"));
     c3.appendChild(hq("minRule") || aiP("Each factor is scored 0, ½ or 1, and the category takes the lowest of the three. The lowest factor sets the score because the three factors " +
       "complement each other: a rule that reaches every firm but cannot be enforced protects little, and strong enforcement cannot make up for a rule that does not exist."));
@@ -2819,7 +2768,6 @@ window.CI_BOOT = function () {
       f3.appendChild(add(el("div", "st"), el("b", null, x[0]), x[1] ? "“" + cap(x[1]) + ".”" : ""));
     });
     c4.appendChild(f3);
-    if (selp.section) c4.appendChild(el("p", "small muted", "Selection principles: " + MANSRC + ", section " + selp.section + "."));
     c4.appendChild(el("h4", null, "Scoring rules"));
     var fs = MAN.deFactoScale || {}, st = el("table", "plain");
     st.appendChild(add(el("tr"), el("th", null, "Score"), el("th", null, "Interpretation")));
@@ -2830,7 +2778,6 @@ window.CI_BOOT = function () {
     st.appendChild(add(el("tr"), add(el("td"), el("span", "ind na sample", "n/a")), el("td", null, fs["Not Applicable"] ? "Not Applicable. “" + fs["Not Applicable"] + "”" : "Not Applicable")));
     st.appendChild(add(el("tr"), add(el("td"), el("span", "ind miss sample", "M")), el("td", null, fs.Missing ? "Missing. “" + fs.Missing + "”" : "Missing")));
     c4.appendChild(st);
-    if (fs.section) c4.appendChild(el("p", "small muted", "Scale: " + MANSRC + ", section " + fs.section + "."));
     add(c4, hq("adoption"), hq("scoredOnce"), hq("aggregation"));
     c4.appendChild(fold("What is left out of the score", "market share", [hq("marketShare")]));
     c4.appendChild(fold("What varies from market to market", "applicability, observation, competitive weight", [
@@ -2956,7 +2903,7 @@ window.CI_BOOT = function () {
       if (d) { var dn = link(d.file, "Download"); dn.setAttribute("download", ""); add(dl.lastChild, " · ", dn); }
       else dl.lastChild.appendChild(tbdP("The document itself.", "small"));
     }
-    docRow("manual", MANSRC, "the full methodology; quoted throughout this page");
+    docRow("manual", MANSRC, "the full methodology");
     docRow("handbook", HBSRC, "scoring criteria, the coded records of every jurisdiction and the market applications");
     docRow("paper", "Working paper", "Cheng, Xu and Yakout, “Beyond Market Concentration: Measuring Contestability in Digital Markets”, July 2026");
     doc("Online appendix", "every table of the database and the scoring rules in full", extLink(APPENDIX, "Open"));
@@ -3236,13 +3183,13 @@ window.CI_BOOT = function () {
   }
 
   /* ========================================================== TAB 5: DATA & SOURCES */
-  var DATA_SECTIONS = [["downloads", "Data downloads"], ["library", "Source and evidence library"], ["docs", "Documentation and versioning"]];
+  var DATA_SECTIONS = [["downloads", "Downloads"], ["library", "Sources and evidence"], ["docs", "Documentation"]];
   var DSETS = [
-    { id: "dejure", name: "De Jure", content: "Jurisdiction, category, component scores, overall scores", fn: "Preview, filter, CSV download" },
-    { id: "defacto", name: "De Facto", content: "Gatekeeper–market pairs, indicators, periods, scores, confidence", fn: "Preview, filter, CSV download" },
-    { id: "indices", name: "Aggregated Indices", content: "Overall and dimension-level results", fn: "Preview, download" },
-    { id: "meta", name: "Supporting Metadata", content: "Definitions, coding identifiers, missing-value conventions, version", fn: "View and download" },
-    { id: "db", name: "Complete Database", content: "Full database", fn: "SQLite download" }
+    { id: "dejure", name: "De Jure", content: "Jurisdiction, category, component scores, overall scores" },
+    { id: "defacto", name: "De Facto", content: "Gatekeeper–market pairs, indicators, periods, scores, confidence" },
+    { id: "indices", name: "Aggregated Indices", content: "Overall and dimension-level results" },
+    { id: "meta", name: "Supporting Metadata", content: "Definitions, coding identifiers, missing-value conventions, version" },
+    { id: "db", name: "Complete Database", content: "Every table, the legal full texts and the provisions, in one SQLite file" }
   ];
   // what each column of the downloads means
   var DICT = {
@@ -3272,9 +3219,7 @@ window.CI_BOOT = function () {
     document.title = "Data & Sources · The Contestability Index";
     sec = DATA_SECTIONS.some(function (x) { return x[0] === sec; }) ? sec : "downloads";
     var s = section(), w = el("div", "wrap");
-    head(w, "Data & Sources", "Work with the data, verify the assessments",
-      "Download the scores, inspect the legal provisions and the evidence behind them, and check which version you are using.");
-    w.appendChild(versionBox());
+    head(w, null, "Data & Sources", "Download the scores, and check the law or the evidence behind each one.");
     var tabs = el("div", "tabs-row");
     tabs.setAttribute("role", "tablist");
     DATA_SECTIONS.forEach(function (x) {
@@ -3293,31 +3238,55 @@ window.CI_BOOT = function () {
   }
 
   /* ---------------------------------------------------------- downloads */
+  // One row per dataset: what it holds, a direct download, and a preview that opens under the list when asked for.
   function dataDownloads(host, params) {
-    var cur = DSETS.some(function (d) { return d.id === params.set; }) ? params.set : "dejure";
-    var t = el("table", "plain dsets"), hr = el("tr");
-    ["Dataset", "Content", "Functionality", ""].forEach(function (x) { hr.appendChild(el("th", null, x)); });
-    t.appendChild(hr);
-    var rows = {};
+    var cur = DSETS.some(function (d) { return d.id === params.set; }) ? params.set : null;
+    var DIRECT = {
+      dejure: function () { csvDownload("contestability_dejure.csv", CSV.dejureHeader.concat(["dimension_score", "jurisdiction_index"]),
+        CSV.dejureRows(CODES, "overall").map(function (r) { return r.concat([val(r[2], r[4]), val(r[2], "overall")]); })); },
+      defacto: function () { csvDownload("contestability_defacto.csv", CSV.defactoHeader, CSV.defactoRows(UNITS, "overall")); },
+      indices: function () { csvDownload("contestability_indices.csv", CSV.indexHeader, CSV.indexRows()); }
+    };
+    var list = el("div", "dset-list"), rows = {}, views = {};
     DSETS.forEach(function (d) {
-      var b = el("button", "btn btn-outline btn-sm", d.id === "db" ? "Details" : d.id === "meta" ? "View" : "Preview");
-      b.type = "button";
-      b.addEventListener("click", function () { cur = d.id; draw(); });
-      var tr = add(el("tr"), add(el("td"), el("strong", null, d.name)), el("td", null, d.content), el("td", "small", d.fn), add(el("td", "num"), b));
-      rows[d.id] = tr;
-      t.appendChild(tr);
+      var row = el("div", "dset-row"), txt = el("div", "dset-txt"), acts = el("div", "dset-acts");
+      add(txt, el("b", null, d.name), el("span", null, d.content));
+      if (DIRECT[d.id]) {
+        var dl = el("button", "btn btn-fill btn-sm", "Download CSV");
+        dl.type = "button";
+        dl.addEventListener("click", DIRECT[d.id]);
+        acts.appendChild(dl);
+      } else if (d.id === "db") {
+        var a = link(D.meta.dbUrl, "Download SQLite" + (D.meta.fullDbBytes ? " (" + (D.meta.fullDbBytes / 1e6).toFixed(1) + " MB)" : ""));
+        a.className = "btn btn-fill btn-sm";
+        a.setAttribute("download", "");
+        acts.appendChild(a);
+      }
+      var v = el("button", "btn btn-outline btn-sm", d.id === "db" ? "Details" : d.id === "meta" ? "View" : "Preview");
+      v.type = "button";
+      v.addEventListener("click", function () { cur = cur === d.id ? null : d.id; draw(true); });
+      acts.appendChild(v);
+      views[d.id] = v;
+      add(row, txt, acts);
+      rows[d.id] = row;
+      list.appendChild(row);
     });
-    host.appendChild(add(el("div", "table-scroll"), t));
-    host.appendChild(el("p", "small muted", "Every download carries the record identifiers that match a score to its definition and its sources; see Documentation and versioning."));
+    host.appendChild(list);
     var out = el("div", "dset-view");
     host.appendChild(out);
-    function draw() {
-      Object.keys(rows).forEach(function (k) { rows[k].classList.toggle("on", k === cur); });
+    function draw(scroll) {
+      Object.keys(rows).forEach(function (k) {
+        rows[k].classList.toggle("on", k === cur);
+        views[k].setAttribute("aria-expanded", k === cur ? "true" : "false");
+        views[k].textContent = k === cur ? "Close" : k === "db" ? "Details" : k === "meta" ? "View" : "Preview";
+      });
       out.textContent = "";
-      history.replaceState(null, "", "#/data/downloads?set=" + cur);
+      history.replaceState(null, "", "#/data/downloads" + (cur ? "?set=" + cur : ""));
+      if (!cur) return;
       ({ dejure: dsDeJure, defacto: dsDeFacto, indices: dsIndices, meta: dsMeta, db: dsDb })[cur](out);
+      if (scroll) out.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-    draw();
+    draw(false);
   }
   function selectOf(label, options, onChange) {
     var sel = el("select", "pselect");
@@ -3351,8 +3320,7 @@ window.CI_BOOT = function () {
       selectOf("Dimension", [["", "All dimensions"]].concat(DIMS.map(function (d) { return [d, d + " " + DIM_SHORT[d]]; })), function (v) { fd = v; draw(); })),
       dlButton("contestability_dejure.csv", header, csvRows, "Download CSV (as filtered)")));
     host.appendChild(out);
-    var cols = [{ label: "Record", get: function (r) { return recordId("dj", r.c, r.m, "current"); } },
-                { label: "Jurisdiction", get: function (r) { return jurName[r.c]; }, fmt: function (v, r) { return link("#/jurisdiction/" + r.c, v); } },
+    var cols = [{ label: "Jurisdiction", get: function (r) { return jurName[r.c]; }, fmt: function (v, r) { return link("#/jurisdiction/" + r.c, v); } },
                 { label: "Category", get: function (r) { return r.m.id; }, fmt: function (v, r) { return recordLink(r.m.id + ". " + r.m.name, function () { matrixOrder = CODES; openCell(r.m.id, r.c); }); } },
                 { label: "Dim.", get: function (r) { return r.m.dimension; } },
                 { label: "Score", score: true, get: function (r) { return r.x.score; }, fmt: function (v) { return glyph(v); } },
@@ -3382,8 +3350,7 @@ window.CI_BOOT = function () {
       selectOf("Period", [["", "Both periods"], ["baseline", DF_BASE], ["current", DF_NOW]], function (v) { fp = v; draw(); })),
       dlButton("contestability_defacto.csv", CSV.defactoHeader, csvRows, "Download CSV (as filtered)")));
     host.appendChild(out);
-    var cols = [{ label: "Record", get: function (r) { return recordId("df", r.it.unit, r.m, r.p); } },
-                { label: "Pair", get: function (r) { return unitById[r.it.unit].name; } },
+    var cols = [{ label: "Pair", get: function (r) { return unitById[r.it.unit].name; } },
                 { label: "Indicator", get: function (r) { return r.m.id; }, fmt: function (v, r) { return recordLink(r.m.code + " " + r.m.indicator, function () { openIndicator(r.it.unit, r.m.id); }); } },
                 { label: "Dim.", get: function (r) { return r.m.dimension; } },
                 { label: "Period", get: function (r) { return r.p; }, fmt: function (v) { return v === "baseline" ? DF_BASE : DF_NOW; } },
@@ -3427,7 +3394,7 @@ window.CI_BOOT = function () {
     host.appendChild(el("h3", "pane-title", "Missing-value conventions"));
     var cs = el("table", "plain"), st = D.paper.codingStates || {};
     [["scored", st.Scored], ["missing", st.Missing], ["not_applicable", st["Not Applicable"]]].forEach(function (x) {
-      cs.appendChild(add(el("tr"), el("th", null, x[0]), el("td", null, x[1] ? "“" + cap(x[1]) + ".” (working paper)" : "")));
+      cs.appendChild(add(el("tr"), el("th", null, x[0]), el("td", null, x[1] ? cap(x[1]) + "." : "")));
     });
     host.appendChild(cs);
     host.appendChild(aiP("In the downloads a missing or not applicable indicator has an empty score cell. An empty cell is never a zero, and such indicators are left out of the dimension score and the index."));
@@ -3436,10 +3403,6 @@ window.CI_BOOT = function () {
   }
   function dsDb(host) {
     host.appendChild(chartHead("Complete database", "One SQLite file with every table the site reads, the legal full texts and the provisions."));
-    var a = link(D.meta.dbUrl, "Download contestability.db" + (D.meta.fullDbBytes ? " (" + (D.meta.fullDbBytes / 1e6).toFixed(1) + " MB)" : ""));
-    a.className = "btn btn-fill";
-    a.setAttribute("download", "");
-    host.appendChild(add(el("p"), a));
     var nInst = Object.keys(D.instruments).reduce(function (n, k) { return n + D.instruments[k].length; }, 0);
     var t = el("table", "plain");
     [["Built", D.meta.built], ["De Jure scores, jurisdiction level", String(D.meta.totalCells)], ["De Jure scores, market level", String(D.markets.deJure.length)],
@@ -3452,6 +3415,8 @@ window.CI_BOOT = function () {
 
   /* ---------------------------------------------------------- source and evidence library */
   var LIB = null, LIB_TYPES = [["instrument", "Legal instrument"], ["provision", "Verbatim provision"], ["text", "Full legal text"], ["defacto", "De Facto evidence source"]];
+  // The first three kinds of record belong to the De Jure layer, the fourth to the De Facto layer.
+  var LIB_LAYER = { instrument: "dj", provision: "dj", text: "dj", defacto: "df" };
   function libraryRecords() {
     if (LIB) return LIB;
     var out = [];
@@ -3500,36 +3465,54 @@ window.CI_BOOT = function () {
               dim: dimById[(params.dim || "").toUpperCase()] ? params.dim.toUpperCase() : "", cat: mechById[+params.cat] ? String(+params.cat) : "",
               period: params.period === "dj" || params.period === "df" ? params.period : "", q: params.q || "" };
     var shown = 40;
-    host.appendChild(chartHead("Source and evidence library: " + recs.length + " records",
-      "The legal instruments, the full texts and verbatim provisions behind the De Jure scores, and the sources behind the De Facto scores. Each record names the scored observations it supports."));
-    add(host, mq("codingRecord"));
+    host.appendChild(chartHead("Sources and evidence: " + recs.length + " records",
+      "The legal instruments, full texts and verbatim provisions behind the De Jure scores, and the sources behind the De Facto scores. Each record names the scores it supports."));
     var bar = el("div", "toolbar lib-bar"), left = el("div", "ctrl-left");
-    function sel(label, key, options) {
-      var s2 = selectOf(label, options, function (v) { F[key] = v; if (key === "dim") { F.cat = ""; fillCats(); } shown = 40; draw(); });
-      s2.value = F[key];
-      return s2;
-    }
-    var sType = sel("Legal instrument or source type", "type", [["", "All record types"]].concat(LIB_TYPES));
-    var sJ = sel("Jurisdiction", "j", [["", "All jurisdictions"]].concat(CODES.map(function (c) { return [c, jurName[c]]; })));
-    var sD = sel("Dimension", "dim", [["", "All dimensions"]].concat(DIMS.map(function (d) { return [d, d + " " + DIM_SHORT[d]]; })));
+    // Record type, grouped by layer: choosing a group's heading line picks the whole layer (what the period filter did).
+    var sType = el("select", "pselect");
+    sType.setAttribute("aria-label", "Type of record");
+    sType.appendChild(new Option("All record types", ""));
+    [["dj", "De Jure · law in force, " + DJ_DATE], ["df", "De Facto · " + DF_BASE + " and " + DF_NOW]].forEach(function (g) {
+      var og = document.createElement("optgroup");
+      og.label = g[1];
+      og.appendChild(new Option("All " + (g[0] === "dj" ? "De Jure" : "De Facto") + " records", "layer:" + g[0]));
+      LIB_TYPES.filter(function (t) { return LIB_LAYER[t[0]] === g[0]; }).forEach(function (t) { og.appendChild(new Option(t[1], t[0])); });
+      sType.appendChild(og);
+    });
+    sType.value = F.type || (F.period ? "layer:" + F.period : "");
+    sType.addEventListener("change", function () {
+      var v = sType.value;
+      F.type = v.indexOf("layer:") === 0 ? "" : v;
+      F.period = v.indexOf("layer:") === 0 ? v.slice(6) : "";
+      shown = 40; draw();
+    });
+    var sJ = selectOf("Jurisdiction", [["", "All jurisdictions"]].concat(CODES.map(function (c) { return [c, jurName[c]]; })), function (v) { F.j = v; shown = 40; draw(); });
+    sJ.value = F.j;
+    // Dimension and obligation category in one list: a dimension's heading line picks all of its categories.
     var sC = el("select", "pselect");
-    sC.setAttribute("aria-label", "Obligation category");
-    function fillCats() {
-      sC.textContent = "";
-      sC.appendChild(new Option("All obligation categories", ""));
-      D.mechanisms.filter(function (m) { return !F.dim || m.dimension === F.dim; }).forEach(function (m) { sC.appendChild(new Option(m.id + ". " + m.name, String(m.id))); });
-      sC.value = F.cat;
-    }
-    fillCats();
-    sC.addEventListener("change", function () { F.cat = sC.value; shown = 40; draw(); });
-    var sP = sel("Applicable period", "period", [["", "All periods"], ["dj", "De Jure: law in force, " + DJ_DATE], ["df", "De Facto: " + DF_BASE + " and " + DF_NOW]]);
+    sC.setAttribute("aria-label", "Dimension or obligation category");
+    sC.appendChild(new Option("All obligation categories", ""));
+    D.dimensions.forEach(function (d) {
+      var og = document.createElement("optgroup");
+      og.label = d.id + " " + d.name;
+      og.appendChild(new Option("All of " + d.id, "dim:" + d.id));
+      D.mechanisms.filter(function (m) { return m.dimension === d.id; }).forEach(function (m) { og.appendChild(new Option(m.id + ". " + m.name, String(m.id))); });
+      sC.appendChild(og);
+    });
+    sC.value = F.cat || (F.dim ? "dim:" + F.dim : "");
+    sC.addEventListener("change", function () {
+      var v = sC.value;
+      F.cat = v.indexOf("dim:") === 0 ? "" : v;
+      F.dim = v.indexOf("dim:") === 0 ? v.slice(4) : "";
+      shown = 40; draw();
+    });
     var q = el("input");
     q.type = "search";
-    q.placeholder = "Search titles and provisions, or a scored observation such as dj:JP:D2.2";
+    q.placeholder = "Search titles and provisions";
     q.value = F.q;
     q.setAttribute("aria-label", "Search the library");
     q.addEventListener("input", function () { F.q = q.value; shown = 40; draw(); });
-    add(left, sType, sJ, sD, sC, sP, q);
+    add(left, sType, sJ, sC, q);
     bar.appendChild(left);
     host.appendChild(bar);
     var count = el("p", "small muted"), list = el("div", "lib-list"), more = el("p");
@@ -3538,7 +3521,7 @@ window.CI_BOOT = function () {
       return r.type === "defacto" ? recordId("df", r.unit, mechById[id], "current") : recordId("dj", r.j, mechById[id], "current"); }); }
     bar.appendChild(dlButton("contestability_sources.csv", ["record_type", "jurisdiction", "pair", "title", "reference", "url", "scored_observations", "provision_text", "english_translation"], function () {
       return hitsNow.map(function (r) { return [r.type, r.j, r.unit || "", r.title, r.ref || "", r.url || "", obsIds(r).join(" "), r.excerpt || "", r.translation || ""]; });
-    }, "Download these records (CSV)"));
+    }, "Download CSV"));
     add(host, count, list, more);
     host.appendChild(el("h3", "pane-title", "Browse the legal record by jurisdiction"));
     var chips = el("div", "chips");
@@ -3619,17 +3602,11 @@ window.CI_BOOT = function () {
     var c = citeText();
     host.appendChild(el("h3", "pane-title", "Citation"));
     host.appendChild(add(el("p"), c.paper, " ", docLink("paper", "PDF")));
-    host.appendChild(tbdP("How to cite the dataset itself, and the licence it is released under. Until then, cite the working paper and give the database build shown above."));
+    host.appendChild(tbdP("How to cite the dataset itself, and the licence it is released under."));
 
-    host.appendChild(el("h3", "pane-title", "Data dictionary"));
-    host.appendChild(aiP("The columns of the three score downloads. The field descriptions are drafted from the database; the definitions of the scores themselves are in the Methodology."));
-    [["dejure", "De Jure (contestability_dejure.csv)"], ["defacto", "De Facto (contestability_defacto.csv)"], ["indices", "Aggregated indices (contestability_indices.csv)"]].forEach(function (x) {
-      var t = el("table", "plain");
-      t.appendChild(add(el("tr"), el("th", null, "Column"), el("th", null, "Meaning")));
-      DICT[x[0]].forEach(function (r) { t.appendChild(add(el("tr"), el("td", "mono", r[0]), el("td", "small", r[1]))); });
-      host.appendChild(fold(x[1], DICT[x[0]].length + " groups of columns", [add(el("div", "table-scroll"), t)]));
-    });
-    host.appendChild(add(el("p", "small"), link("#/data/downloads?set=meta", "Definitions, coding identifiers and missing-value conventions →")));
+    host.appendChild(el("h3", "pane-title", "Version"));
+    host.appendChild(versionBox());
+    host.appendChild(tbdP("Version numbers and the record of earlier and later releases."));
 
     host.appendChild(el("h3", "pane-title", "Data coverage"));
     var nInst = Object.keys(D.instruments).reduce(function (n, k) { return n + D.instruments[k].length; }, 0);
@@ -3645,26 +3622,26 @@ window.CI_BOOT = function () {
       cov.appendChild(add(el("tr"), el("td", null, x[0]), el("td", "small", x[1]), el("td", "small", x[2]), el("td", "num", String(x[3]))));
     });
     host.appendChild(add(el("div", "table-scroll"), cov));
-    host.appendChild(add(el("p", "small"), "Jurisdictions: " + CODES.map(function (c2) { return jurName[c2]; }).join(", ") + ". Pairs: " +
-      UNITS.map(function (u) { return unitById[u].name + " (" + unitPlace(u) + ")"; }).join(", ") + "."));
 
-    host.appendChild(el("h3", "pane-title", "Methodology and appendix"));
-    host.appendChild(add(el("p"), link("#/methodology", "Methodology on this site"), " · ", link("#/methodology/docs", "Technical documentation"), " · ", extLink(APPENDIX, "Online appendix"),
-      docFile("manual") ? " · " : null, docLink("manual", MANSRC + " (PDF)"), docFile("handbook") ? " · " : null, docLink("handbook", HBSRC + " (PDF)")));
-
-    host.appendChild(el("h3", "pane-title", "Update history"));
-    var uh = el("table", "plain");
-    uh.appendChild(add(el("tr"), el("th", null, "Date"), el("th", null, "What")));
-    uh.appendChild(add(el("tr"), el("td", null, String(D.meta.built || "").replace(/ .*$/, "")), el("td", "small", "Database build used by this site (" + D.meta.built + "): " + nM +
-      " obligation categories in " + nJ + " jurisdictions; De Facto for " + nU + " pairs at two dates.")));
-    host.appendChild(uh);
-    host.appendChild(tbdP("Version numbers and the record of earlier and later releases."));
+    host.appendChild(el("h3", "pane-title", "Data dictionary"));
+    [["dejure", "De Jure (contestability_dejure.csv)"], ["defacto", "De Facto (contestability_defacto.csv)"], ["indices", "Aggregated indices (contestability_indices.csv)"]].forEach(function (x) {
+      var t = el("table", "plain");
+      t.appendChild(add(el("tr"), el("th", null, "Column"), el("th", null, "Meaning")));
+      DICT[x[0]].forEach(function (r) { t.appendChild(add(el("tr"), el("td", "mono", r[0]), el("td", "small", r[1]))); });
+      host.appendChild(fold(x[1], DICT[x[0]].length + " groups of columns", [add(el("div", "table-scroll"), t)]));
+    });
+    host.appendChild(add(el("p", "small"), link("#/data/downloads?set=meta", "Definitions, coding identifiers and missing-value conventions →")));
 
     host.appendChild(el("h3", "pane-title", "Differences from the working paper"));
-    dataPaper(host);
+    var pd = el("div");
+    dataPaper(pd);
+    var disc = D.paper.discrepancies || [], dfc = (D.paper.deFactoCompare || []).filter(function (x) { return !x.same; });
+    host.appendChild(fold("Show the differences", disc.length + " of " + nJ + " jurisdictions and " + dfc.length + " of " + (D.paper.deFactoCompare || []).length + " pairs differ",
+      Array.prototype.slice.call(pd.childNodes)));
 
-    host.appendChild(el("h3", "pane-title", "Repository"));
-    host.appendChild(add(el("p"), extLink(REPO, "The site and its data files on GitHub"), " · ", link(D.meta.dbUrl, "Download the complete database")));
+    host.appendChild(el("h3", "pane-title", "Related"));
+    host.appendChild(add(el("p"), link("#/methodology", "Methodology"), " · ", link("#/methodology/docs", "Technical documentation"), " · ", extLink(APPENDIX, "Online appendix"),
+      " · ", extLink(REPO, "Repository on GitHub")));
   }
   function dataPaper(host) {
     host.appendChild(aiP("The working paper (July 2026) was compiled from an earlier state of the database. The paper's Table 3 covers fifteen obligation categories; " +
@@ -3728,11 +3705,10 @@ window.CI_BOOT = function () {
     var t2 = el("table", "plain");
     t2.appendChild(add(el("tr"), el("th", null, "Category"), el("th", null, "Score"), el("th", null, "Article relied on"), el("th", null, "")));
     D.mechanisms.forEach(function (m) {
-      var c = cellOf(m.id, code), b = el("button", "open-doc opens-panel", "Details");
+      var c = cellOf(m.id, code), b = el("button", "btn btn-outline btn-sm open-doc opens-panel", "Details");
       b.type = "button";
-      b.style.cssText = "background:none;border:1px solid var(--purple);color:var(--purple);border-radius:3px;padding:1px 8px;font-size:.76rem;font-weight:700;cursor:pointer";
       b.addEventListener("click", function () { matrixOrder = CODES; openCell(m.id, code); });
-      t2.appendChild(add(el("tr"), add(el("td"), link("#/methodology/" + m.code, m.id + ". " + m.name)), paint(el("td", "sc", glyph(c.score)), c.score),
+      t2.appendChild(add(el("tr"), add(el("td"), link("#/methodology/" + m.code, m.id + ". " + m.name)), add(el("td", "sc"), paint(el("span", "pill-inline", glyph(c.score)), c.score)),
         el("td", "small", (basis[m.id] || []).join("; ") || c.instrument_basis || "—"), add(el("td"), b)));
     });
     w.appendChild(add(el("div", "table-scroll"), t2));
@@ -3742,9 +3718,8 @@ window.CI_BOOT = function () {
     if (docs.length) {
       var ul = el("ul", "link-list");
       docs.forEach(function (d) {
-        var b = el("button", "open-doc", d.name || d.stem);
+        var b = el("button", "linkish open-doc", d.name || d.stem);
         b.type = "button";
-        b.style.cssText = "background:none;border:0;padding:0;color:var(--purple-deep);text-decoration:underline;cursor:pointer;font:inherit;text-align:left";
         b.addEventListener("click", function () { openDoc(d); });
         ul.appendChild(add(el("li"), b, el("span", "muted small", " · " + [d.language, Math.round(d.chars / 1000) + "k characters"].filter(Boolean).join(" · "))));
       });
@@ -3782,13 +3757,13 @@ window.CI_BOOT = function () {
     w.appendChild(aiP("The De Jure layer covers " + words(nJ) + " jurisdictions: " + theNames(CODES) +
       ". The De Facto layer covers " + words(nU) + " gatekeeper–market pairs. Both use the same " + words(nM) + " mechanisms in " + words(nD) + " dimensions."));
     w.appendChild(el("h3", null, "Research team and contact"));
-    w.appendChild(el("p", null, "Zhiyang Cheng, Tracy Xu and Amr Yakout."));
+    w.appendChild(el("p", null, "Tracy Xu, Amr Yakout and Zhiyang Cheng."));
     w.appendChild(tbdP("Contact address, and the licence for the data and the site."));
     w.appendChild(el("h3", null, "How to cite"));
     w.appendChild(add(el("p"), citeText().paper, " ", docLink("paper", "PDF")));
     w.appendChild(tbdP("How to cite the dataset itself."));
-    w.appendChild(el("h3", null, "Status of these figures"));
-    w.appendChild(aiP(["The site is a preliminary preview. Its figures come from the project database built " + D.meta.built + " and may change. Where they differ from the working paper, ",
+    w.appendChild(el("h3", null, "The figures and the working paper"));
+    w.appendChild(aiP(["The figures on this site come from the project database built " + D.meta.built + ". Where they differ from the working paper, ",
       link("#/data/docs", "Data & Sources"), " lists each difference and its reason."]));
     w.appendChild(el("h3", null, "How the site works"));
     w.appendChild(aiP("The site is a set of static files. When a page opens, your browser downloads a copy of the project database without the legal " +
@@ -3824,7 +3799,6 @@ window.CI_BOOT = function () {
     ttHide();
     var app = $("#app");
     app.textContent = "";
-    cmpButtons = [];
     document.title = "The Contestability Index";
     var navKey = page === "explore" || page === "jurisdiction" ? "explore" : page === "data" || page === "legal" ? "data"
                : page === "methodology" || page === "applications" || page === "about" ? page : "overview";

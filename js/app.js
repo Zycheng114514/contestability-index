@@ -1537,17 +1537,34 @@ window.CI_BOOT = function () {
     s2.appendChild(w2);
     app.appendChild(s2);
 
-    /* framework preview */
+    /* framework preview: each layer from its sources to the index (the steps of Coding Handbook II.B and III) */
     var s3 = section(null, "framework"), w3 = el("div", "wrap");
     head(w3, "Measurement framework", "Understanding the measurement");
-    var flow = el("div", "flow four");
-    [["Dimension", "A broad category of competitive friction. There are " + words(nD) + "."],
-     ["Obligation category and indicator", "Each of the " + words(nM) + " mechanisms has one legal category (De Jure) and one observable indicator (De Facto)."],
-     ["Scored observation", "Each is scored 0, ½ or 1, with its legal basis or its evidence on record."],
-     ["Index", "A dimension is the mean of its scores; the index is the mean of the " + words(nD) + " dimensions."]].forEach(function (x) {
-      flow.appendChild(add(el("div", "st"), el("b", null, x[0]), x[1]));
-    });
-    w3.appendChild(flow);
+    w3.appendChild(aiP("The framework has " + words(nD) + " dimensions of competitive friction and " + words(nM) + " mechanisms. Each mechanism has one legal obligation " +
+      "category (De Jure) and one observable indicator (De Facto). The two layers are built in the same order, from the sources to the index.", "flow-lead"));
+    function chain(label, steps) {
+      w3.appendChild(el("p", "flow-label", label));
+      var flow = el("div", "flow six");
+      steps.forEach(function (x) { flow.appendChild(add(el("div", "st"), el("b", null, x[0]), x[1])); });
+      w3.appendChild(flow);
+    }
+    chain("De Jure: from the legal text to the index",
+      [["Legal instruments", "Each jurisdiction's digital-competition statutes, regulations, court remedies and conduct requirements are registered with their citations " +
+          "and official sources."],
+       ["Provision extraction", "For each of the " + words(nM) + " obligation categories, the operative text is copied verbatim from the primary source, with an English " +
+          "translation where needed."],
+       ["Three factors", "Each category is scored for each jurisdiction on Existence, Scope and Enforceability, each 0, ½ or 1."],
+       ["Category score", "The lowest of the three factors, with its legal basis on record."],
+       ["Dimension score", "The mean of the category scores in the dimension."],
+       ["De Jure index", "The mean of the " + words(nD) + " dimension scores."]]);
+    chain("De Facto: from the evidence to the index",
+      [["Gatekeeper–market pair", "The unit is one gatekeeper in one market, observed at two dates."],
+       ["Evidence", "For each of the " + words(nM) + " indicators, evidence is taken from regulatory decisions, compliance reports, court judgments and independent " +
+          "market data, and recorded with its sources."],
+       ["Applicability", "An indicator whose mechanism does not operate in the market is not applicable; one without the evidence needed is missing. Neither is scored zero."],
+       ["Indicator score", "Each applicable indicator with evidence is scored 0, ½ or 1, with a confidence level."],
+       ["Dimension score", "The mean of the scored indicators in the dimension."],
+       ["De Facto index", "The mean of the " + words(nD) + " dimension scores."]]);
     var vf = link("#/methodology/framework", "View measurement framework →");
     vf.className = "btn btn-outline";
     w3.appendChild(add(el("p"), vf));

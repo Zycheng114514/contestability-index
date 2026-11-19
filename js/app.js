@@ -1763,8 +1763,9 @@ window.CI_BOOT = function () {
   }
 
   // One row group per measure (overall and the four dimensions), one mark per pair. A period draws bars; "change"
-  // draws the earlier observation (hollow) joined to the later one (filled). Clicking a group selects its dimension.
-  function pairDimChart(units, period, onPick) {
+  // draws the earlier observation (hollow) joined to the later one (filled). Clicking a group calls onPick with its
+  // dimension; without onPick nothing is clickable. noMark leaves the label of the dimension in use unmarked.
+  function pairDimChart(units, period, onPick, noMark) {
     var w = 760, lw = 196, bh = 13, gap = 3, gpad = 18, top = 22;
     var gh = units.length * (bh + gap) - gap, h = top + KEYS.length * (gh + gpad) + 4;
     var s = svg("svg", { viewBox: "0 0 " + w + " " + h, class: "chart", role: "img",
@@ -1773,7 +1774,7 @@ window.CI_BOOT = function () {
     xGrid(s, X, top - 4, h - 4, true);
     KEYS.forEach(function (k, gi) {
       var y0 = top + gi * (gh + gpad) + gpad / 2;
-      var lab = stext({ x: lw - 10, y: y0 + gh / 2 + 4, "text-anchor": "end", class: "lab" + (onPick ? " pick" : "") + (S.dim === k ? " on" : "") }, keyShort(k));
+      var lab = stext({ x: lw - 10, y: y0 + gh / 2 + 4, "text-anchor": "end", class: "lab" + (onPick ? " pick" : "") + (S.dim === k && !noMark ? " on" : "") }, keyShort(k));
       if (onPick) { lab.addEventListener("click", function () { onPick(k); }); lab.setAttribute("tabindex", "0"); lab.setAttribute("role", "button"); }
       s.appendChild(lab);
       units.forEach(function (u, i) {
@@ -1795,10 +1796,9 @@ window.CI_BOOT = function () {
           s.appendChild(stext({ x: X(v) + 5, y: y + bh - 2, class: "val" }, num(v)));
         }
         var hit = tipRect(s, X(0), y - 1, w - X(0), bh + 2, function () {
-          return [unitById[u].name + " · " + keyName(k), DF_BASE + ": " + num(a) + " · " + DF_NOW + ": " + num(b), cover, "Click for the indicators"].filter(Boolean);
+          return [unitById[u].name + " · " + keyName(k), DF_BASE + ": " + num(a) + " · " + DF_NOW + ": " + num(b), cover, onPick ? "Click for the indicators" : ""].filter(Boolean);
         });
-        hit.style.cursor = "pointer";
-        hit.addEventListener("click", function () { if (onPick) onPick(k, u); });
+        if (onPick) { hit.style.cursor = "pointer"; hit.addEventListener("click", function () { onPick(k, u); }); }
       });
     });
     return s;
@@ -3095,10 +3095,11 @@ window.CI_BOOT = function () {
         "Indicators with too little evidence are recorded as Missing and left out of the index rather than counted as zero, so each index rests on the indicators that could be scored: " +
         listText(UNITS.map(function (u) { return scoredOf(mIdx("de_facto", u, "current")) + " for " + unitById[u].name; })) + "."],
       additional: function (c) {
-        c.appendChild(chartHead("By dimension", "Hollow: " + DF_BASE + ". Filled: " + DF_NOW + ".",
+        c.appendChild(chartHead("By dimension", "Hollow: " + DF_BASE + ". Filled: " + DF_NOW + ". Click a row for its indicators.",
           [dlButton("contestability_defacto_index.csv", CSV.indexHeader, function () { return CSV.indexRows().filter(function (r) { return r[0] === "de_facto"; }); })]));
         c.appendChild(seriesKey(UNITS.map(function (u) { return { label: unitById[u].name, color: UNIT_COLOR[u] }; })));
-        c.appendChild(pairDimChart(UNITS, "change", null));
+        // a row opens the De Facto view on the change between the two dates, at that dimension, with the three pairs
+        c.appendChild(pairDimChart(UNITS, "change", function (k) { S.dim = k; S.period = "change"; S.units = UNITS.slice(); S.cat = null; go(exploreHref("defacto")); }, true));
         c.appendChild(el("h3", "pane-title", "Case: " + u1.name + ", the largest increase"));
         c.appendChild(aiP("The Digital Markets Act designation of " + u1.gatekeeper + " for " + u1.service.replace(/ \(.*\)$/, "") + " dates from " +
           day(u1.designationDate) + ". In " + DF_BASE + ", before the Act's obligations applied, the pair scored " + num(c1.a) + " on the De Facto index; in " + DF_NOW +

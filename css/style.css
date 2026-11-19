@@ -101,16 +101,16 @@ main:focus { outline: none; }
 
 /* ------------------------------------------------------------ hero */
 .hero { position: relative; overflow: hidden; background: #fff; color: var(--ink); border-bottom: 1px solid var(--rule); }
-.hero-map { position: absolute; top: 0; bottom: 0; right: -3%; width: 60%; display: flex; align-items: center; }
+.hero-map { position: absolute; top: 0; bottom: 0; right: -2%; width: 52%; display: flex; align-items: center; }
 .hero-map .c-none { fill: #efede9; }
 .hero-map path { stroke: #fff; }
 .hero-map svg { width: 100%; height: auto; }
 .hero::after { content: ""; position: absolute; inset: 0;
-  background: linear-gradient(90deg, #fff 0%, #fff 36%, rgba(255, 255, 255, 0) 58%); }
+  background: linear-gradient(90deg, #fff 0%, #fff 46%, rgba(255, 255, 255, 0) 58%); }
 .hero-in { position: relative; z-index: 1; max-width: 1240px; margin: 0 auto; padding: 72px 16px 66px; text-align: left; }
-.hero h1 { max-width: 600px; margin: 0 0 20px; color: var(--ink); font-weight: 400; font-size: clamp(2.2rem, 4.6vw, 3.7rem); line-height: 1.04; letter-spacing: -0.015em; }
+.hero h1 { max-width: min(620px, 47vw); margin: 0 0 20px; color: var(--ink); font-weight: 400; font-size: clamp(2.2rem, 4.6vw, 3.7rem); line-height: 1.04; letter-spacing: -0.015em; }
 .hero h1 em, .accent-serif { font-family: var(--serif); font-style: italic; font-weight: 400; }
-.hero .lede { margin: 0 0 14px; max-width: 500px; font-size: 1.14rem; color: var(--ink-2); }
+.hero .lede { margin: 0 0 14px; max-width: min(500px, 44vw); font-size: 1.14rem; color: var(--ink-2); }
 .hero .btn { font-size: 0.8rem; padding: 11px 24px; }
 
 /* ------------------------------------------------------------ control bar */
@@ -465,6 +465,7 @@ blockquote.translation { border-left-color: var(--soft); }
 @media (max-width: 980px) {
   .explore-grid, .profile-grid, .plotzone { grid-template-columns: 1fr; }
   .hero-map { width: 100%; right: 0; opacity: 0.4; }
+  .hero h1, .hero .lede { max-width: none; }
   .hero::after { background: rgba(255, 255, 255, 0.55); }
   .dimlist { border-right: 0; border-bottom: 1px solid var(--rule-soft); display: flex; flex-wrap: wrap; gap: 4px; padding: 10px 12px; }
   .dimlist .lab { display: none; }

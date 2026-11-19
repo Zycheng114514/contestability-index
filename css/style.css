@@ -562,6 +562,14 @@ blockquote.doc-quote cite { display: block; margin-top: 4px; font-size: 0.76rem;
 .layer-card h3 { margin: 0; font-weight: 400; font-size: 1.6rem; }
 .layer-card .tag { margin: 2px 0 10px; color: var(--ink-2); }
 .layer-links { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin: auto 0 0; padding-top: 12px; font-size: 0.86rem; }
+/* the two cards share their rows (title, tag, definition, Unit / Observed, links), so Unit / Observed sits at the same height in both
+   whatever the length of the definitions above; where shared rows are not supported, that block is pushed down to the links instead */
+.layer-card .mfacts { margin-top: auto; }
+.layer-card .mfacts + .layer-links { margin-top: 0; }
+@supports (grid-template-rows: subgrid) {
+  .layer-card { display: grid; grid-template-rows: subgrid; grid-row: span 5; row-gap: 0; }
+  .layer-card .mfacts { margin-top: 10px; align-self: start; }
+}
 .hier-mini { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 4px 0 18px; }
 .hier-col { border: 1px solid var(--rule); border-radius: 6px; background: #fff; overflow: hidden; }
 .hier-dim { display: block; text-decoration: none; color: var(--ink); padding: 12px 14px 10px; border-top: 4px solid var(--dark); }

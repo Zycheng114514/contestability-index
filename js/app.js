@@ -1510,7 +1510,6 @@ window.CI_BOOT = function () {
     left.appendChild(el("h2", "sec-head", "What the index measures"));
     left.appendChild(aiP("The Contestability Index measures the opportunity for incumbent positions in digital markets to be challenged, rather than market " +
       "structure or outcomes. It scores " + words(nM) + " mechanisms, grouped into " + words(nD) + " dimensions, from two sides: what the law requires and what is observed in the market."));
-    left.appendChild(add(el("p"), link("#/methodology/concept", "Concept and scope →")));
     /* coverage summary: each figure is an entry point */
     var cov = el("div", "cov-grid");
     [[nJ, "Jurisdictions", "scored on the law", "#/explore/dejure?view=rank"],

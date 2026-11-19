@@ -107,9 +107,10 @@ window.CI_BOOT = function () {
   function scrollToEl(node) { if (node) node.scrollIntoView({ behavior: "smooth", block: "start" }); }
 
   /* ------------------------------------------------------------ the score scale
-     One hue, light to dark, ending at KGI blue (#003da5). Until 2026-11-18 the ramp went on to a navy (#0c2a66),
-     which read as black blocks in the tables. */
-  var STOPS = [[0, "#d6e0f4"], [0.25, "#b3c5ea"], [0.5, "#86a3dc"], [0.75, "#4c76c6"], [1, "#003da5"]];
+     One hue, light to dark, built on KGI blue (#003da5). The WJP site's magenta-to-teal ramp was
+     [[0,"#d40276"],[0.103,"#d40276"],[0.2217,"#ea1813"],[0.3842,"#f19d4b"],[0.5,"#f6c600"],[0.6768,"#adc493"],
+      [0.7758,"#6a9e89"],[0.8865,"#125459"],[0.9699,"#003632"],[1,"#003632"]]; swapping it back is this one line. */
+  var STOPS = [[0, "#c9d8f3"], [0.25, "#93b0e8"], [0.5, "#5583d6"], [0.75, "#1f56bd"], [0.88, "#003da5"], [1, "#0c2a66"]];
   var GRADIENT = "linear-gradient(90deg, " + STOPS.map(function (s) {
     return s[1] + " " + (s[0] * 100).toFixed(2) + "%";
   }).join(", ") + ")";
@@ -126,7 +127,7 @@ window.CI_BOOT = function () {
     return rgbOf(STOPS[STOPS.length - 1][1]);
   }
   function scoreColor(v) {
-    if (v === null || v === undefined) return "#ecebe8";
+    if (v === null || v === undefined) return "#e8e8e8";
     return "rgb(" + scoreRgb(v).join(",") + ")";
   }
   // Text on a score fill: white on the dark end of the scale, near-black on the light end.
@@ -136,7 +137,7 @@ window.CI_BOOT = function () {
       x /= 255;
       return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
     });
-    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] > 0.2 ? "#1d1d22" : "#ffffff";
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] > 0.18 ? "#1d1d22" : "#ffffff";
   }
   function paint(node, v) { node.style.background = scoreColor(v); node.style.color = inkOn(v); return node; }
 
@@ -159,7 +160,7 @@ window.CI_BOOT = function () {
   var SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#8e5bd0", "#d6457f", "#2ba9bd", "#7a8794", "#8a5a2b"];
   var UNIT_COLOR = {};
   UNITS.forEach(function (u, i) { UNIT_COLOR[u] = SERIES[i]; });
-  var LAW = "#4a4a4a";  // De Jure marks in the law-against-market charts
+  var LAW = "#151515";  // De Jure marks in the law-against-market charts
   var nM = D.mechanisms.length, nJ = CODES.length, nD = DIMS.length, nU = UNITS.length;
   var DJ_DATE = month(D.meta.evidenceDate);
   var DF_NOW = month((D.periods["de_facto|market|current"] || {}).observed);
@@ -284,7 +285,7 @@ window.CI_BOOT = function () {
     node.addEventListener("blur", ttHide);
   }
 
-  // The card shown on the map and the ranking: the De Jure score, the rank, and the four dimensions, with
+  // The dark card shown on the map and the ranking: the De Jure score, the rank, and the four dimensions, with
   // the De Facto observations beside them where they exist (the three EU gatekeeper-market pairs).
   function hoverCard(code, key, place) {
     var a = D.aggregates[code], v = val(code, key);
@@ -1006,7 +1007,7 @@ window.CI_BOOT = function () {
         var tr = el("tr");
         cols.forEach(function (c) {
           var v = c.get(r), td = el("td", c.score ? "sc" : c.num ? "num" : null);
-          if (c.score && v !== null && v !== undefined) td.appendChild(paint(el("span", "pill-inline", c.fmt ? c.fmt(v, r) : num(v)), v));
+          if (c.score && v !== null && v !== undefined) { paint(td, v); td.textContent = c.fmt ? c.fmt(v, r) : num(v); }
           else {
             var f = c.fmt ? c.fmt(v, r) : (v === null || v === undefined || v === "" ? "—" : String(v));
             if (typeof f === "string") td.textContent = f; else td.appendChild(f);
@@ -3708,7 +3709,7 @@ window.CI_BOOT = function () {
       var c = cellOf(m.id, code), b = el("button", "btn btn-outline btn-sm open-doc opens-panel", "Details");
       b.type = "button";
       b.addEventListener("click", function () { matrixOrder = CODES; openCell(m.id, code); });
-      t2.appendChild(add(el("tr"), add(el("td"), link("#/methodology/" + m.code, m.id + ". " + m.name)), add(el("td", "sc"), paint(el("span", "pill-inline", glyph(c.score)), c.score)),
+      t2.appendChild(add(el("tr"), add(el("td"), link("#/methodology/" + m.code, m.id + ". " + m.name)), paint(el("td", "sc", glyph(c.score)), c.score),
         el("td", "small", (basis[m.id] || []).join("; ") || c.instrument_basis || "—"), add(el("td"), b)));
     });
     w.appendChild(add(el("div", "table-scroll"), t2));

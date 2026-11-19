@@ -544,9 +544,10 @@ blockquote.doc-quote cite { display: block; margin-top: 4px; font-size: 0.76rem;
 .ov-hero .hero-in { padding: 64px 16px 58px; }
 .hero-cta { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; margin-top: 22px; }
 .layer-card .layer-def { margin: 0 0 10px; }
-.ov-intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 34px; align-items: start; }
-.ov-intro p { color: var(--ink-2); }
-.cov-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+/* the introduction, then the four number blocks in one row across the page: their edges fall on the edges of the two layer cards below */
+.ov-intro { display: grid; grid-template-columns: 1fr; gap: 18px; }
+.ov-intro p { color: var(--ink-2); max-width: 820px; }
+.cov-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
 .cov { display: block; text-decoration: none; text-align: center; color: var(--ink); background: #fff; border: 1px solid var(--rule); border-radius: 6px; padding: 16px 8px 14px; }
 .cov:hover { border-color: var(--dark); background: var(--wash); color: var(--ink); }
 .cov b { display: block; font-size: 2.2rem; font-weight: 400; line-height: 1.1; }
@@ -706,14 +707,14 @@ table.ind-list td:first-child { white-space: nowrap; }
   .site-search { flex-basis: 220px; }
 }
 @media (max-width: 980px) {
-  .ov-intro, .layer-grid, .two-col { grid-template-columns: 1fr; }
+  .layer-grid, .two-col { grid-template-columns: 1fr; }
   .hier-mini { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .flow.four, .flow.three { grid-template-columns: 1fr; }
   .foot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mgrid.n2 { grid-template-columns: 1fr; }
 }
 @media (max-width: 720px) {
-  .cov-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cov-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .topbar-in { flex-wrap: wrap; padding-top: 8px; padding-bottom: 8px; }
   .site-search { order: 3; flex: 1 1 100%; }
   .search-results { left: 0; right: auto; }

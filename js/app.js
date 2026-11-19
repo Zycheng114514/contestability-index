@@ -1466,26 +1466,6 @@ window.CI_BOOT = function () {
   }
 
   // Small squares for the categories of a dimension; each opens the category's methodology entry.
-  function hierarchyMini() {
-    var g = el("div", "hier-mini");
-    D.dimensions.forEach(function (d) {
-      var c = link("#/methodology/" + d.id, ""), ms = D.mechanisms.filter(function (m) { return m.dimension === d.id; });
-      c.className = "hier-dim";
-      add(c, el("span", "k", d.id), el("b", null, d.name), el("span", "n", ms.length + " obligation categories"));
-      var sq = el("div", "hier-cats");
-      ms.forEach(function (m) {
-        var a = link("#/methodology/" + m.code, String(m.id));
-        a.title = m.id + ". " + m.name + " · indicator " + m.code + " " + m.indicator;
-        a.addEventListener("click", function (e) { e.stopPropagation(); });
-        sq.appendChild(a);
-      });
-      var box = el("div", "hier-col");
-      add(box, c, sq);
-      g.appendChild(box);
-    });
-    return g;
-  }
-
   /* ========================================================== TAB 1: OVERVIEW */
   function pageOverview(app) {
     var hero = el("section", "hero ov-hero"), hm = el("div", "hero-map");
@@ -1568,7 +1548,6 @@ window.CI_BOOT = function () {
       flow.appendChild(add(el("div", "st"), el("b", null, x[0]), x[1]));
     });
     w3.appendChild(flow);
-    w3.appendChild(hierarchyMini());
     var vf = link("#/methodology/framework", "View measurement framework →");
     vf.className = "btn btn-outline";
     w3.appendChild(add(el("p"), vf));

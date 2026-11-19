@@ -570,17 +570,6 @@ blockquote.doc-quote cite { display: block; margin-top: 4px; font-size: 0.76rem;
   .layer-card { display: grid; grid-template-rows: subgrid; grid-row: span 5; row-gap: 0; }
   .layer-card .mfacts { margin-top: 10px; align-self: start; }
 }
-.hier-mini { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 4px 0 18px; }
-.hier-col { border: 1px solid var(--rule); border-radius: 6px; background: #fff; overflow: hidden; }
-.hier-dim { display: block; text-decoration: none; color: var(--ink); padding: 12px 14px 10px; border-top: 4px solid var(--dark); }
-.hier-dim:hover { background: var(--wash); color: var(--ink); }
-.hier-dim .k { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); }
-.hier-dim b { display: block; font-weight: 500; font-size: 0.98rem; line-height: 1.25; min-height: 2.5em; }
-.hier-dim .n { display: block; font-size: 0.76rem; color: var(--ink-3); margin-top: 4px; }
-.hier-cats { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 14px 12px; }
-.hier-cats a { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 24px; border-radius: 2px; background: var(--band);
-  color: var(--ink-2); font-size: 0.74rem; font-weight: 700; text-decoration: none; }
-.hier-cats a:hover { background: var(--dark); color: #fff; }
 .flow.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .flow.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
@@ -716,7 +705,6 @@ table.ind-list td:first-child { white-space: nowrap; }
 }
 @media (max-width: 980px) {
   .layer-grid, .two-col { grid-template-columns: 1fr; }
-  .hier-mini { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .flow.four, .flow.three { grid-template-columns: 1fr; }
   .foot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mgrid.n2 { grid-template-columns: 1fr; }

@@ -2691,11 +2691,15 @@ window.CI_BOOT = function () {
     h(c2, "Units of observation");
     add(c2, ap("units"), ap("unit_dejure"), ap("unit_dejure_market"), ap("unit_defacto"));
     var chain = ART.chain || [], djm = D.periods["de_jure|market|current"] || {}, djb = D.periods["de_jure|market|baseline"] || {};
+    // how many pairs have a market-level De Jure record at each date (Google Play has none for the baseline)
+    var djNowN = UNITS.filter(function (u) { return mIdx("de_jure", u, "current"); }).length;
+    var djBaseN = UNITS.filter(function (u) { return mIdx("de_jure", u, "baseline"); }).length;
     if (chain.length === 3) {
       c2.appendChild(tabCap("Figure 1.", "The three levels of measurement and what each covers at present"));
       var cf = el("div", "flow three");
       [[chain[0][2], nJ + " jurisdictions × " + nM + " obligation categories, " + DJ_DATE, "#/explore/dejure", "Explore De Jure"],
-       [chain[1][2], nU + " gatekeeper–market pairs, " + month(djb.observed) + " and " + month(djm.observed), "#/explore/compare?type=gap", "Law beside market"],
+       [chain[1][2], djNowN + " gatekeeper–market pairs in " + month(djm.observed) + (djBaseN === djNowN ? " and " : "; " + djBaseN + " of them also in ") + month(djb.observed),
+        "#/explore/compare?type=gap", "Law beside market"],
        [chain[2][2], nU + " pairs × " + nM + " indicators, " + DF_BASE + " and " + DF_NOW, "#/explore/defacto", "Explore De Facto"]].forEach(function (x) {
         cf.appendChild(add(el("div", "st"), el("b", null, x[0]), x[1], el("br"), more(x[2], x[3])));
       });

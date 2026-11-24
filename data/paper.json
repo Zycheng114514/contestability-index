@@ -993,7 +993,7 @@
         [
           "paper",
           "3.3.4",
-          "Only applicable, scored items enter the benchmark aggregation. Items classified as Not Applicable are excluded from the denominator. Missing items are not assigned a numerical value, and the share of applicable items for which a score is available is reported alongside the resulting index."
+          "Only applicable, scored items enter the benchmark aggregation. Items classified as Not Applicable are excluded from the denominator."
         ]
       ],
       "var_lead": [

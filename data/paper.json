@@ -488,6 +488,639 @@
       "announced": "Announced measures that were not operative during the observation window are recorded in the evidence column and do not affect the score."
     }
   },
+  "article": {
+    "note": "Text of the Methodology page (pageMethodology in public/js/app.js), which since 2026-11-24 is an article assembled from the team's own documents and no longer a set of quotations. Each passage is a list of parts [source, section, text]; a part is copied from that source (paper = working paper of July 2026, manual = Methodology Manual V3.2, handbook = Coding Handbook V4.1). Nothing inside a part is reworded: only whole sentences, a leading 'First,' / 'Second,' and cross-references to other sections are left out. The page shows these passages without the [AI generated] marker; website/build/check_methodology_text.py (run by publish_site_data.py) stops the publication if a part is not found word for word in its source.",
+    "sources": {
+      "paper": "Working paper, July 2026 (sources/DMA_Contestability.pdf)",
+      "manual": "Methodology Manual V3.2",
+      "handbook": "Coding Handbook V4.1"
+    },
+    "passages": {
+      "definition": [
+        [
+          "paper",
+          "1",
+          "We define contestability as the institutional, technological, economic, and behavioral conditions that determine whether rivals can realistically enter, expand, and challenge incumbent firms on the merits of their products and services. This definition treats contestability as a competitive opportunity, rather than as a market structure or downstream competitive outcome."
+        ],
+        [
+          "paper",
+          "2.1",
+          "It does not require a market to exhibit low concentration, frequent entry, or immediate displacement of the incumbent. Instead, it asks whether the channels required for a credible competitive challenge remain open."
+        ],
+        [
+          "paper",
+          "2.1",
+          "Contestability is therefore a matter of degree. A market becomes more contestable as the institutional, technological, economic, and behavioral frictions confronting challengers are reduced."
+        ]
+      ],
+      "structure": [
+        [
+          "paper",
+          "1",
+          "Market concentration and contestability are related, but they answer different questions. Concentration measures describe the current distribution of economic activity across firms. Contestability concerns the conditions under which that distribution can be challenged. A highly concentrated market may remain exposed to competition if users can switch easily, rivals can enter and reach customers, and incumbents cannot foreclose access to essential inputs. Conversely, concentration may understate competitive concerns where formally present rivals remain unable to overcome ecosystem dependence, discriminatory platform conduct, or control over data and infrastructure."
+        ]
+      ],
+      "outcomes": [
+        [
+          "paper",
+          "2.2",
+          "Contestability must also be distinguished from downstream competitive outcomes. Entry, entrant survival, changes in market share, prices, quality, innovation, productivity, and consumer welfare may all respond to contestability, but they are not themselves the conditions that make a market contestable. These outcomes are jointly shaped by contestability and by other factors, including product quality, technological change, demand conditions, and firm-specific capabilities. A highly contestable market may therefore continue to exhibit a dominant incumbent, while a decline in incumbent market share does not necessarily imply that the underlying barriers to entry and expansion have been removed."
+        ]
+      ],
+      "circularity": [
+        [
+          "paper",
+          "2.2",
+          "Including such outcomes directly in the index would also create circularity. For example, using entrant growth or incumbent market-share decline as measurement components would make it difficult subsequently to examine whether greater contestability promotes entry or changes market structure. We therefore treat these variables as external outcomes that can be used to validate the index and to study the consequences of contestability, rather than as components of the measure itself."
+        ]
+      ],
+      "layers": [
+        [
+          "paper",
+          "9",
+          "The framework organizes contestability into four dimensions and a stable set of underlying mechanisms. It then evaluates each mechanism through two complementary layers. De Jure Contestability measures the formal legal and regulatory support for competitive challenge, while De Facto Contestability measures the extent to which the same mechanisms operate in observed market conditions. Keeping the two layers separate makes it possible to distinguish regulatory design from implementation and to study their relationship without incorporating downstream competitive outcomes directly into the index."
+        ]
+      ],
+      "def_dejure": [
+        [
+          "manual",
+          "II.A",
+          "The formal legal and regulatory environment governing competition in a market. It captures the extent to which laws, regulations, and platform obligations create opportunities for rival firms to enter and expand."
+        ]
+      ],
+      "def_defacto": [
+        [
+          "manual",
+          "II.A",
+          "Actual competitive conditions observed in the marketplace. It captures whether rivals can realistically enter, grow, and compete given prevailing technological, economic, and behavioral conditions."
+        ]
+      ],
+      "market": [
+        [
+          "paper",
+          "2.4",
+          "The framework is applied within a defined digital market. For measurement purposes, a market is a standardized category of digital service or platform activity within which the same contestability mechanisms can be identified and evaluated across jurisdictions and observation periods."
+        ],
+        [
+          "paper",
+          "2.4",
+          "This market unit serves a comparative measurement function. It does not necessarily coincide with, or substitute for, the case-specific relevant-market analysis required in a particular competition-law investigation."
+        ]
+      ],
+      "stages": [
+        [
+          "paper",
+          "2.3",
+          "Contestability in digital markets cannot be represented adequately by a single observable variable. Generally, a challenger needs to pass through several distinct stages: users must be able to move toward alternatives; rivals must be able to reach those users; platforms must not discriminate against rivals once access is obtained; and rivals must possess the technical resources and data needed to provide and scale a competitive service."
+        ],
+        [
+          "paper",
+          "2.3",
+          "We organize these conditions into four dimensions. They correspond to four fundamental questions:"
+        ]
+      ],
+      "questions": [
+        [
+          "paper",
+          "2.3",
+          "Can users leave incumbent platforms and adopt competing services?"
+        ],
+        [
+          "paper",
+          "2.3",
+          "Can rivals reach users and distribute competing products or services?"
+        ],
+        [
+          "paper",
+          "2.3",
+          "Can rivals compete fairly after obtaining access?"
+        ],
+        [
+          "paper",
+          "2.3",
+          "Can rivals obtain the data, interoperability, infrastructure, and other technical resources required to compete and scale?"
+        ]
+      ],
+      "complementary": [
+        [
+          "paper",
+          "2.3",
+          "The four dimensions are distinct but complementary. Improvements in one dimension do not necessarily offset barriers in another. A choice screen may make it easier for users to express a preference, but it will generate limited competitive pressure if rivals cannot obtain distribution. Alternative distribution may permit entry, but competitors may remain disadvantaged by self-preferencing. Neutral platform treatment may still be insufficient where rivals lack the data or infrastructure necessary to provide a comparable service."
+        ]
+      ],
+      "levels": [
+        [
+          "paper",
+          "3.1",
+          "A contestability dimension is a broad category of competitive friction."
+        ],
+        [
+          "paper",
+          "3.1",
+          "A contestability mechanism is the economic channel through which competitive opportunities are facilitated or restricted, for example, reducing default bias, lowering switching costs, enabling alternative distribution, preventing discriminatory ranking and facilitating technical interoperability. The term mechanism is reserved for these economic channels and is not used interchangeably with a legal provision or empirical indicator."
+        ]
+      ],
+      "two_perspectives": [
+        [
+          "paper",
+          "3.1",
+          "Each mechanism is evaluated from two perspectives. A De Jure obligation category is a standardized category of formal right, prohibition, restriction, or requirement intended to support the mechanism. The particular statute, regulation, article, court order, or regulatory decision establishing the obligation is recorded separately as its legal basis. A De Facto indicator is an observable condition used to evaluate whether the mechanism operates in practice. For instance, the mechanism of reducing default bias may be evaluated through active-choice requirements in the De Jure layer and through the design, coverage, and use of choice screens in the De Facto layer."
+        ]
+      ],
+      "purposes": [
+        [
+          "paper",
+          "3.1",
+          "This distinction serves two purposes. First, it prevents legal instruments, economic mechanisms, and observed market conditions from being conflated. A single legal article may establish several distinct obligations, while several legal provisions may jointly support one obligation. Second, it enables the framework to maintain a stable conceptual architecture while using market-specific indicators. The same mechanism may be observed differently in search, app distribution, messaging, or marketplaces, but its economic meaning remains unchanged."
+        ]
+      ],
+      "classification": [
+        [
+          "paper",
+          "3.1",
+          "Classification follows the immediate economic function of the obligation or indicator. Each item is assigned to one primary mechanism and one dimension, even where it may generate downstream effects through several channels. For example, access to an operating-system interface is classified under technical interoperability because that is its immediate function, even if the resulting access subsequently improves distribution or switching. This unique-assignment rule limits overlap and double counting."
+        ]
+      ],
+      "units": [
+        [
+          "paper",
+          "3.2",
+          "The De Jure and De Facto layers begin with different units of observation because they measure different objects."
+        ]
+      ],
+      "unit_dejure": [
+        [
+          "paper",
+          "3.2.1",
+          "The primary De Jure coding unit is an obligation category–jurisdiction observation at a specified point in time. For each jurisdiction, the framework evaluates whether the legal and regulatory system provides formal support for each contestability mechanism and records the markets, services, firms, and activities covered by the relevant legal provisions."
+        ],
+        [
+          "paper",
+          "3.2.1",
+          "The initial coding produces a jurisdiction-level De Jure Contestability Index. This index summarizes the breadth and strength of formal contestability protections across the full set of mechanisms. It should be interpreted as an overview of the regulatory environment rather than as evidence that every obligation applies equally in every digital market."
+        ]
+      ],
+      "unit_dejure_market": [
+        [
+          "paper",
+          "3.2.1",
+          "For market-specific analysis, the jurisdiction-level records are restated as a market–jurisdiction De Jure measure. This restatement identifies the contestability mechanisms relevant to the defined market and evaluates the extent to which the jurisdiction’s formal obligations cover that market. The resulting measure therefore captures the legal protections applicable to competitive challenge within a particular market, rather than the jurisdiction’s broader regulatory environment."
+        ]
+      ],
+      "unit_defacto": [
+        [
+          "paper",
+          "3.2.2",
+          "The primary De Facto unit is a market–jurisdiction observation at a specified point in time. Where observed conditions differ materially across gatekeepers or platforms within the market, the assessment may be conducted at the more specific gatekeeper–market–jurisdiction level."
+        ],
+        [
+          "paper",
+          "3.2.2",
+          "De Facto Contestability begins at the market level because realized competitive conditions are inherently market-specific. Search, app distribution, operating systems, messaging, and marketplaces differ in their technological architecture, network effects, distribution channels, user behavior, infrastructure requirements, and sources of incumbent advantage. A jurisdiction-wide De Facto score constructed before measuring individual markets would combine heterogeneous competitive conditions and require an additional rule for weighting markets of different economic importance and evidentiary coverage."
+        ]
+      ],
+      "chain": [
+        [
+          "paper",
+          "3.2.3",
+          "Jurisdiction-level legal environment"
+        ],
+        [
+          "paper",
+          "3.2.3",
+          "Market-level formal protections"
+        ],
+        [
+          "paper",
+          "3.2.3",
+          "Market-level realized conditions"
+        ]
+      ],
+      "alignment": [
+        [
+          "paper",
+          "3.2.3",
+          "This alignment permits comparisons between what the legal framework formally provides and what market participants experience in practice."
+        ]
+      ],
+      "dj_objective": [
+        [
+          "paper",
+          "3.3.1",
+          "De Jure Contestability measures the strength of the formal legal, regulatory, and institutional conditions supporting competitive challenge. It does not measure compliance or realized market effects. Instead, it asks whether an operative obligation exists, how broadly it applies, and whether it is supported by credible enforcement."
+        ]
+      ],
+      "dj_stages_1": [
+        [
+          "paper",
+          "4.1",
+          "The legal dataset is constructed in four stages. We first compile an inventory of the statutes, regulations, court remedies, regulatory decisions, conduct requirements, and administrative rules relevant to digital-market contestability in each jurisdiction. The inventory records the citation, legal status, effective date, and official source of each instrument. Pending and proposed instruments are retained in a pipeline register but do not enter the current-period score."
+        ]
+      ],
+      "dj_stages_2": [
+        [
+          "paper",
+          "4.1",
+          "We next map each De Jure obligation category to the specific articles, orders, or provisions bearing on it. The operative legal text is then extracted from the primary source. For non-English instruments, the database retains both the original-language text and the translation used for coding. Finally, coders assess Existence, Scope, and Enforceability and record the corresponding scores, rationale, legal basis, market coverage, evidence date, and review status."
+        ]
+      ],
+      "dj_sources": [
+        [
+          "paper",
+          "3.4",
+          "De Jure coding relies primarily on authoritative legal sources, including enacted legislation and regulation, binding court judgments and remedies, regulatory decisions, conduct requirements, implementing acts, and official administrative rules. Where primary legal text is available, it forms the basis of scoring; academic commentary and secondary analysis may assist interpretation but do not replace the operative legal authority."
+        ]
+      ],
+      "dj_factors_lead": [
+        [
+          "paper",
+          "3.3.1",
+          "Each De Jure obligation category is evaluated along three factors:"
+        ]
+      ],
+      "dj_factors": [
+        [
+          "paper",
+          "3.3.1",
+          "Existence: whether an operative obligation addressing the relevant mechanism is present;"
+        ],
+        [
+          "paper",
+          "3.3.1",
+          "Scope: the range of firms, services, markets, or activities covered; and"
+        ],
+        [
+          "paper",
+          "3.3.1",
+          "Enforceability: whether the obligation is supported by credible oversight, sanctions, judicial supervision, or private enforcement."
+        ]
+      ],
+      "dj_scale": [
+        [
+          "paper",
+          "3.3.1",
+          "Each factor is scored on a scale of 0, 0.5, or 1. A score of zero indicates that the relevant condition is absent. A score of one-half indicates that it is partial, legally weak, sectoral, firm-specific, or dependent on additional case-by-case action. A score of one indicates a binding and operative obligation with comprehensive coverage of the relevant domain and credible enforcement."
+        ]
+      ],
+      "dj_min_lead": [
+        [
+          "paper",
+          "3.3.1",
+          "The jurisdiction-level De Jure obligation-category score is:"
+        ]
+      ],
+      "dj_min": [
+        [
+          "paper",
+          "3.3.1",
+          "The minimum rule reflects the complementarity of the three factors. A broad enforcement system cannot compensate for the absence of an operative obligation. Similarly, a well-defined obligation binding only one firm does not provide the same market-wide protection as a generally applicable rule, and a broadly written obligation without credible enforcement may provide little effective formal protection."
+        ]
+      ],
+      "dj_domain": [
+        [
+          "handbook",
+          "II.A",
+          "Scope is judged against the mechanism’s own economic domain rather than the whole economy — a marketplace-only statute covers the full domain of a marketplace-native mechanism (Scope = 1 there) but only part of the domain of a mechanism that operates economy-wide (Scope = 0.5)."
+        ],
+        [
+          "handbook",
+          "II.B",
+          "A mechanism is a stable contestability channel rather than a provision of any single statute; where a channel can be secured through more than one route (for example, alternative distribution through either sideloading or third-party app stores, or technical interoperability through either API access or hardware access), the routes are treated as one mechanism and scored on the strongest available channel."
+        ]
+      ],
+      "dj_decomposition": [
+        [
+          "paper",
+          "3.3.1",
+          "The factor decomposition is retained even when only the final score enters the index. Two observations may receive the same final score while representing different legal environments. For example, a strong obligation with narrow firm or sector coverage and a broadly applicable obligation established through weak legal guidance may both receive a score of 0.5. Reporting the underlying factors allows these differences to remain visible."
+        ]
+      ],
+      "dj_forms": [
+        [
+          "paper",
+          "4.1",
+          "To facilitate comparison across legal systems, each instrument is also classified according to how its substantive obligations become operative. The legal-form taxonomy distinguishes generally applicable ex ante statutes, firm-specific binding orders and conduct requirements, administrative guidance, ex post enforcement practice, statutory catalogues requiring case-by-case activation, open designation frameworks without an operative obligation, pending instruments, and the absence of an instrument on point. Legal form is not a separate component of the index. It provides a consistent basis for interpreting the Existence, Scope, and Enforceability factors across institutional settings."
+        ]
+      ],
+      "dj_forms_signature": [
+        [
+          "handbook",
+          "II.C",
+          "To keep the factor signatures comparable across very different legal systems, instruments are classified into one of eight mutually exclusive legal forms; each form has a typical factor signature from which its score ceiling follows under the MIN rule. This is why, outside the EU and Germany, most non-zero cells sit at 0.5: they rest on firm-specific orders, sectoral statutes, guidance, or case practice rather than on generally applicable ex ante statutes."
+        ]
+      ],
+      "agg_dimension_lead": [
+        [
+          "paper",
+          "3.3.4",
+          "Under the baseline specification, the dimension score is the unweighted arithmetic mean of the applicable obligation-category or indicator scores:"
+        ]
+      ],
+      "agg_overall_lead": [
+        [
+          "paper",
+          "3.3.4",
+          "The overall De Jure or De Facto Index is the equal-weighted average of the four dimensions:"
+        ]
+      ],
+      "agg_equal": [
+        [
+          "paper",
+          "3.3.4",
+          "Equal weighting is adopted as the benchmark because it is transparent, reproducible, and does not impose strong assumptions about the relative economic importance of the four channels of contestability. The dimension scores remain separately available because a higher score in one dimension does not necessarily compensate economically for a low score in another."
+        ]
+      ],
+      "dj_market": [
+        [
+          "paper",
+          "3.2.1",
+          "The distinction between jurisdiction-level and market-level scope is important. A sector-specific law may receive a limited scope score in the jurisdiction-wide comparison because it covers only part of the mechanism’s broader economic domain. The same law may provide full coverage when the analysis is restricted to the sector it directly governs."
+        ],
+        [
+          "paper",
+          "4.1",
+          "Firm-specific remedies remain limited in Scope because they bind a named firm rather than the market generally."
+        ]
+      ],
+      "df_objective": [
+        [
+          "paper",
+          "3.3.2",
+          "De Facto Contestability measures whether the same economic mechanisms are realized in observed market conditions. The De Facto layer does not ask whether an obligation formally exists. It asks whether users and rivals can exercise the corresponding competitive opportunity in practice."
+        ]
+      ],
+      "df_pair": [
+        [
+          "handbook",
+          "III.D",
+          "De Facto Contestability is measured for a gatekeeper–market pair."
+        ],
+        [
+          "handbook",
+          "III.D",
+          "An indicator set applies only where the named firm operates the bottleneck the mechanism describes."
+        ],
+        [
+          "handbook",
+          "III.D",
+          "Where a market has more than one gatekeeper, each is coded separately on the same indicator set and reported alongside the other. Averaging them would remove the variation the measure is intended to record."
+        ]
+      ],
+      "df_consequences": [
+        [
+          "handbook",
+          "III.D",
+          "Three consequences follow. Applicability is determined against the named gatekeeper’s service. Evidence must concern that gatekeeper; a decision addressed to Apple establishes nothing about Alphabet. And a pre-period score of 0 is distinct from non-participation: Apple scores 0 on alternative distribution in December 2023 because it prohibited the channel, which is a finding about contestability, while a firm operating no service in the market is not scored."
+        ]
+      ],
+      "df_dates": [
+        [
+          "paper",
+          "4.2",
+          "The later period is an evidence cutoff rather than a single-day measurement: individual records retain the date of the regulatory finding, platform change, technical test, or market observation on which the score is based. Announced or planned functionality is recorded but does not affect the current-period score until it becomes operational and observable."
+        ]
+      ],
+      "df_indicators": [
+        [
+          "paper",
+          "3.3.2",
+          "Each applicable mechanism is operationalized through one or more observable indicators. Depending on the market, these may include: the availability and design of user choice or switching processes; the practical usability of data-portability tools; the availability and adoption of alternative distribution channels; the ability of business users to communicate and transact outside the platform; rival ranking, placement, or visibility; access to APIs, interoperability functions, infrastructure, and data; and the extent of incumbent cross-service data accumulation or combination."
+        ]
+      ],
+      "df_selection_lead": [
+        [
+          "manual",
+          "V.C",
+          "The selection of indicators is based on three principles:"
+        ]
+      ],
+      "df_selection": [
+        [
+          "manual",
+          "V.C",
+          "Observability: whether the indicator can be measured using observed evidence;"
+        ],
+        [
+          "manual",
+          "V.C",
+          "Representativeness: whether the indicator accurately reflects the intended contestability mechanisms;"
+        ],
+        [
+          "manual",
+          "V.C",
+          "Comparability: whether the indicator can be measured consistently across jurisdictions, markets, and time."
+        ]
+      ],
+      "df_once": [
+        [
+          "handbook",
+          "III.B",
+          "Each indicator is scored once. Where an observed condition bears on more than one mechanism, it is assigned to the mechanism whose economic function it most directly reflects, and the assignment is documented. The set is not extended with market-specific composites: aggregate measures such as cost of entry, or structural infrastructure costs not imposed by the gatekeeper, are recorded in the evidence column rather than scored."
+        ]
+      ],
+      "df_exercise": [
+        [
+          "paper",
+          "3.3.2",
+          "The mere existence of a competitive option is not sufficient for a high De Facto score. The assessment also considers whether users or rivals can exercise that option effectively in practice. For instance, a platform may formally permit an alternative distribution channel or technical interface while imposing fees, eligibility restrictions, interface friction, or technical limitations that materially reduce its practical usefulness."
+        ],
+        [
+          "handbook",
+          "III.A",
+          "Formal availability does not establish adoption. Where an indicator concerns use or market behaviour, platform documentation alone supports no score above 0.5."
+        ]
+      ],
+      "status_lead": [
+        [
+          "paper",
+          "3.3.3",
+          "Before aggregation, each potential obligation category or indicator is assigned one of three coding statuses: Scored, Not Applicable, or Missing."
+        ],
+        [
+          "paper",
+          "3.3.3",
+          "An item is Scored when the associated contestability mechanism is relevant to the observation and sufficient evidence is available to assign a score of 0, 0.5, or 1. A score of zero therefore indicates that a relevant legal protection or realized competitive condition is absent or highly restrictive; it does not indicate that the item is irrelevant to the market."
+        ]
+      ],
+      "status_na": [
+        [
+          "paper",
+          "3.3.3",
+          "An item is classified as Not Applicable when the underlying contestability mechanism does not operate within the defined market. For example, a messaging interoperability obligation would not enter an assessment of online search unless messaging interoperability formed part of the specified market architecture. Not Applicable is therefore a statement about the scope of the measurement framework for that market, rather than about the strength of contestability."
+        ]
+      ],
+      "status_missing": [
+        [
+          "paper",
+          "3.3.3",
+          "An item is classified as Missing when the underlying mechanism is applicable but the available evidence is insufficient to assign a defensible score. Missing observations are kept distinct from both zero scores and Not Applicable items. This distinction prevents an absence of evidence from being interpreted as evidence of an absent legal protection or restrictive market condition."
+        ],
+        [
+          "handbook",
+          "III.A",
+          "Missing status is used where a score would otherwise depend on inference, on general knowledge of a platform, or on the absence of an adverse regulatory finding."
+        ]
+      ],
+      "df_evidence": [
+        [
+          "paper",
+          "3.4",
+          "De Facto evidence is selected according to the condition being measured. Relevant sources include regulatory monitoring and non-compliance findings, independent technical audits, structured testing, market and usage datasets, academic studies, platform compliance and transparency reports, developer documentation, and surveys of users or business participants. No single source hierarchy applies to all indicators. Platform documentation may establish that a technical option formally exists, while independent testing or market data may be necessary to evaluate usability, adoption, or commercial effectiveness."
+        ]
+      ],
+      "df_penalty": [
+        [
+          "handbook",
+          "III.E",
+          "A regulatory penalty is not by itself evidence of a market condition. A gatekeeper may be fined because its conduct did not change, in which case the coding is unchanged. A score moves only on documented change in the observable condition. Where a penalty decision also records implemented changes, those records are the evidence, and the decision is cited for the finding that friction persists."
+        ]
+      ],
+      "df_confidence": [
+        [
+          "paper",
+          "3.4",
+          "The framework records an evidence-confidence assessment for De Facto observations. High confidence indicates direct and sufficiently complete evidence; moderate confidence indicates credible evidence with meaningful limitations; and low confidence indicates reliance on proxies, self-reported information, or incomplete public data. Confidence affects the interpretation of the estimate but does not mechanically change the numerical score."
+        ]
+      ],
+      "df_aggregation": [
+        [
+          "handbook",
+          "III.A",
+          "Dimension scores are the unweighted arithmetic mean of the applicable indicators scored. The De Facto Contestability Index is the equal-weighted average of the four dimension scores. The De Jure layer takes the minimum of Existence, Scope and Enforceability because a missing obligation is not cured by enforcement machinery. The De Facto layer averages, because partial progress on several channels adds to observed contestability."
+        ]
+      ],
+      "df_denominator": [
+        [
+          "paper",
+          "3.3.4",
+          "Only applicable, scored items enter the benchmark aggregation. Items classified as Not Applicable are excluded from the denominator. Missing items are not assigned a numerical value, and the share of applicable items for which a score is available is reported alongside the resulting index."
+        ]
+      ],
+      "var_lead": [
+        [
+          "handbook",
+          "III.C",
+          "The four dimensions and sixteen mechanisms are stable and do not vary. Three things vary across markets."
+        ]
+      ],
+      "var_applicability": [
+        [
+          "handbook",
+          "III.C",
+          "Applicability. Some mechanisms do not operate in a given market. Cross-platform messaging connectivity applies to number-independent interpersonal communications and to no other market coded here. Parity applies to app stores and intermediation, and reaches search through Shopping, which sits inside the market boundary. Anti-steering reaches any market whose business users are acquired through a Core Platform Service, and so applies in search, though the conduct it observes there differs. Applicability is fixed before scoring and held constant across jurisdictions and periods within a market."
+        ]
+      ],
+      "var_observation": [
+        [
+          "handbook",
+          "III.C",
+          "Observation. The same mechanism is observed through different evidence. Default switching is observed in search through choice-screen deployment and the number of steps to change an engine, and in app distribution through the range of reassignable default categories and whether the store is among them."
+        ]
+      ],
+      "var_weight": [
+        [
+          "handbook",
+          "III.C",
+          "Competitive weight. The same indicator carries different economic weight across markets. Multi-homing signals little in search, where a user running two engines still sends most queries to one, and signals more in social networking, where accounts on several services coexist and attention divides. Data portability matters more in social networking, where the social graph is the asset that holds users, than in search. Interoperability binds in messaging and operating systems and matters less in marketplaces. Under equal weighting these differences appear in the evidence and in score dispersion, not in the weights. A market-specific weighting scheme requires justification and documentation."
+        ]
+      ],
+      "lim_lead": [
+        [
+          "paper",
+          "8",
+          "The framework provides a transparent and extensible measure of digital-market contestability, but the current implementation remains subject to several limitations. These concern the coverage of the data, the availability and comparability of evidence, the role of coding judgment, and the interpretation of the resulting indices."
+        ]
+      ],
+      "lim_coverage": [
+        [
+          "paper",
+          "8",
+          "The empirical coverage remains limited."
+        ],
+        [
+          "paper",
+          "8",
+          "The search application currently covers only Google Search and should be interpreted as a gatekeeper-specific assessment within the online-search market. Extending the framework to additional jurisdictions, gatekeepers, and markets is necessary before drawing broader conclusions about the distribution of contestability across digital services."
+        ]
+      ],
+      "lim_markets": [
+        [
+          "manual",
+          "III.C.1",
+          "The first markets assessed using this index are online search and smartphone apps."
+        ],
+        [
+          "manual",
+          "III.C.1",
+          "Evidence availability and quality were the main determinants in choosing these markets."
+        ],
+        [
+          "manual",
+          "III.C.2",
+          "Markets subject to intensive regulatory scrutiny are not representative of digital markets generally, and their documentation is extensive because they have been probed either by official regulatory bodies or by increased consumer scrutiny that produces a body of analytical commentary. Results from the pilot markets should not be read as indicative of contestability in markets where enforcement has been lighter and the evidence base is correspondingly more sparse."
+        ]
+      ],
+      "lim_evidence": [
+        [
+          "paper",
+          "8",
+          "The De Facto layer relies on heterogeneous public evidence. Regulatory findings, platform documentation, technical tests, market data, and evidence from business users differ in their coverage, timing, and independence. Some conditions can be observed directly, whereas others concern non-public contractual terms, algorithmic treatment, technical performance, or access to data. Missing evidence is also unevenly distributed across observations. This is particularly important for Google Play, where several technical-interoperability and data-access indicators remain unscored. We therefore report measurement coverage alongside the index and interpret comparisons based on substantially different coverage with caution."
+        ]
+      ],
+      "lim_cross": [
+        [
+          "paper",
+          "8",
+          "Numerical comparisons are strongest within the same market, across gatekeepers, jurisdictions, or time. Aggregate scores are less directly comparable across markets because the observable meaning and competitive importance of a mechanism differ across digital services. A score of 0.5 in search and a score of 0.5 in app distribution need not represent equivalent competitive conditions. Cross-market analysis should therefore emphasize dimension- and mechanism-level profiles rather than small differences in the overall index."
+        ]
+      ],
+      "lim_weights": [
+        [
+          "paper",
+          "8",
+          "The aggregation rules embody substantive assumptions. Equal weighting across dimensions provides a transparent baseline but does not imply that every mechanism has the same economic importance in every market."
+        ],
+        [
+          "paper",
+          "3.3.4",
+          "Alternative weighting schemes may be informative where supported by theory or empirical evidence. For example, interoperability may be particularly important in messaging, while alternative distribution may be central to app stores. Any departure from equal weighting should be specified before examining the resulting rankings, applied consistently across comparable observations, and reported as a robustness exercise rather than substituted silently for the benchmark."
+        ]
+      ],
+      "lim_judgment": [
+        [
+          "paper",
+          "8",
+          "Although the methodology uses predefined categories and scoring criteria, the assignment of 0, 0.5, or 1 necessarily involves judgment. Legal provisions may correspond only partially to an obligation category, several instruments may jointly support one mechanism, and observed conditions may fall between the scoring thresholds. The project database preserves the evidence and rationale underlying each assessment, but further work is required to evaluate inter-coder reliability systematically."
+        ]
+      ],
+      "lim_descriptive": [
+        [
+          "paper",
+          "8",
+          "The pre/post applications are descriptive rather than causal. The measured changes may reflect regulatory implementation, platform strategy, technological development, entry by new services, court and enforcement decisions, or changes in user and developer behavior. The index supplies measurement infrastructure for future causal analysis but does not itself provide an identification strategy."
+        ]
+      ],
+      "lim_search": [
+        [
+          "manual",
+          "V.D",
+          "The 0.52 records how the specified contestability mechanisms operate as coded. It says nothing about Google's market power, the concentration of the search market, or its profitability. A market can take partial credit on open-web reachability, off-platform transactions and choice mechanisms while remaining highly concentrated, because the index does not score the structural conditions that sustain concentration in search, the ones that no conduct obligation can reverse or remove."
+        ]
+      ],
+      "lim_dejure": [
+        [
+          "paper",
+          "5.4",
+          "The aggregate results should be interpreted as measures of formal contestability support rather than as rankings of regulatory effectiveness."
+        ],
+        [
+          "paper",
+          "5.4",
+          "The jurisdiction-level index also does not imply that the reported protections operate uniformly in every digital market. A jurisdiction may receive substantial credit because it regulates marketplaces or mobile app stores. However, it might provide little formal support in search, messaging, cloud services, or another market. The jurisdiction-level results should be read as a comparison of regulatory environments."
+        ]
+      ]
+    }
+  },
   "documents": [
     {
       "id": "manual",

@@ -96,13 +96,6 @@ window.CI_BOOT = function () {
     (Array.isArray(parts) ? parts : [parts]).forEach(function (x) { add(p, x); });
     return p;
   }
-  // A passage quoted from a team document (Methodology Manual, working paper), with where it comes from.
-  function quoteP(text, source) {
-    var q = el("blockquote", "doc-quote");
-    q.appendChild(el("span", null, text));
-    if (source) q.appendChild(el("cite", null, source));
-    return q;
-  }
   function go(hash) { if (location.hash === hash) render(); else location.hash = hash; }
   function scrollToEl(node) { if (node) node.scrollIntoView({ behavior: "smooth", block: "start" }); }
 
@@ -1346,19 +1339,10 @@ window.CI_BOOT = function () {
     b.addEventListener("click", function (e) { e.preventDefault(); openCite(); });
   })();
 
-  /* ------------------------------------------------------------ quoted passages and computed statements */
+  /* ------------------------------------------------------------ the team's documents and computed statements */
+  // Tables of the Methodology Manual and the Coding Handbook held in data/paper.json (scales, scoring criteria).
   var MAN = D.paper.manual || {}, MANSRC = String(MAN.source || "Methodology Manual").split(" (")[0];
-  // A passage of the Methodology Manual held in data/paper.json, quoted with its section; nothing if it is not on file.
-  function mq(key, field) {
-    var x = MAN[key], t = x && x[field || "text"];
-    return t ? quoteP(t, MANSRC + ", section " + x.section) : null;
-  }
-  // The same for the Coding Handbook.
   var HB = D.paper.handbookText || {}, HBSRC = HB.source || "Coding Handbook";
-  function hq(key, field) {
-    var x = HB[key], t = x && x[field || "text"];
-    return t ? quoteP(t, HBSRC + ", section " + x.section) : null;
-  }
   // A project document offered for download (Manual, Handbook, working paper): its link, or nothing if it is not on the site.
   function docFile(id) { return (D.paper.documents || []).filter(function (d) { return d.id === id; })[0] || null; }
   function docLink(id, label) {
@@ -2579,7 +2563,7 @@ window.CI_BOOT = function () {
     var e = fold("Dimension " + (i + 1) + " | " + d.name, ms.length + " obligation categories", [], "dim");
     e.id = "meth-" + d.id;
     var b = e.body;
-    if (q.question) b.appendChild(quoteP(q.question + (q.mechanisms ? " " + q.mechanisms : ""), "Working paper"));
+    if (q.question) b.appendChild(el("p", null, q.question + (q.mechanisms ? " " + q.mechanisms : "")));
     if (d.dmaObligations) b.appendChild(el("p", "small muted", "Digital Markets Act obligations its De Facto indicators observe: " + d.dmaObligations + "."));
     /* the dimension's scores are in Explore Data; the entry leads there with the dimension preselected */
     var act = el("p", "entry-actions");
@@ -2592,6 +2576,47 @@ window.CI_BOOT = function () {
     ms.forEach(function (m) { b.appendChild(categoryEntry(m)); });
     return e;
   }
+
+  /* ---- The Methodology is one article (since 2026-11-24).
+     Its paragraphs are the team's own sentences, from the working paper, the Methodology Manual and the Coding Handbook,
+     arranged under the six sections of the plan. They are kept in data/paper.json under article.passages and shown
+     without a marker; build/check_methodology_text.py stops the publication if a part is not found word for word in
+     its document. Paragraphs written for the site (figures read from the database, how to use a table) use aiP and
+     keep the [AI generated] marker. */
+  var ART = (D.paper.article || {}).passages || {};
+  function artText(key) { return (ART[key] || []).map(function (x) { return x[2]; }).join(" "); }
+  // one paragraph of the article; `tail` is a link to the data the paragraph is about
+  function ap(key, tail) {
+    var t = artText(key);
+    if (!t) return null;
+    var p = el("p", null, t);
+    p.setAttribute("data-passage", key);
+    if (tail) add(p, " ", tail);
+    return p;
+  }
+  // the parts of a passage as a list; in "Scope: the range of …" the term is set in bold
+  function alist(key, ordered, after) {
+    var items = ART[key];
+    if (!items) return null;
+    var l = el(ordered ? "ol" : "ul", "art-list");
+    l.setAttribute("data-passage", key);
+    items.forEach(function (x, i) {
+      var li = el("li"), m = /^([A-Z][A-Za-z]{2,24}): (.*)$/.exec(x[2]);
+      if (m) add(li, el("strong", null, m[1]), ": " + m[2]); else add(li, x[2]);
+      if (after) add(li, " ", after(i));
+      l.appendChild(li);
+    });
+    return l;
+  }
+  function more(href, text) { var a = link(href, text + " →"); a.className = "art-more"; return a; }
+  function tabCap(no, text) { return add(el("p", "art-cap"), el("b", null, no), " " + text); }
+  function formula() {
+    var d = el("p", "formula");
+    for (var i = 0; i < arguments.length; i++) add(d, arguments[i]);
+    return d;
+  }
+  function sub(base, s) { return add(el("span"), el("i", null, base), el("sub", null, s)); }
+  function scoreTh(v) { return add(el("th", "sc"), paint(el("span", "pill-inline", glyph(v)), v)); }
 
   function pageMethodology(app, anchor) {
     document.title = "Methodology · The Contestability Index";
@@ -2608,96 +2633,150 @@ window.CI_BOOT = function () {
       list.appendChild(b);
     });
     side.appendChild(list);
-    function card(key, title, intro) {
-      var c = el("div", "card meth-card");
-      c.id = "meth-" + key;
-      cards[key] = c;
-      c.appendChild(el("h2", null, title));
-      if (intro) c.appendChild(intro);
-      main.appendChild(c);
-      return c;
+    var art = el("article", "card meth-card art");
+    function sec(key, title) {
+      var s = el("section", "art-sec");
+      s.id = "meth-" + key;
+      cards[key] = s;
+      s.appendChild(el("h2", null, title));
+      art.appendChild(s);
+      return s;
     }
+    function h(s, text) { s.appendChild(el("h4", null, text)); }
     main.appendChild(el("h1", "pname", "Methodology"));
-    main.appendChild(aiP(["How the index is built, from the definition of contestability to a single score. Every definition links to the data it produces, and every score in ",
+    main.appendChild(aiP(["How the Contestability Index is built: what it measures, how the framework is organised, how each of the two layers is scored " +
+      "and aggregated, and how the results should be read. Every definition links to the data it produces, and every score in ",
       link("#/explore/dejure", "Explore Data"), " links back to its entry here."], "sec-intro"));
+    main.appendChild(art);
 
     /* ---- 1. Concept & Scope */
-    var c1 = card("concept", "1. Concept & Scope");
-    c1.appendChild(aiP("The Contestability Index measures the opportunity for incumbent positions in digital markets to be challenged, rather than market structure or outcomes."));
-    c1.appendChild(el("h4", null, "The two measurement layers (expand for the definition and an example)"));
-    var defs = MAN.definitions || {};
+    var c1 = sec("concept", "1. Concept & Scope");
+    add(c1, ap("definition"));
+    h(c1, "What the index measures, and what it does not");
+    add(c1, ap("structure"), ap("outcomes"), ap("circularity"));
+    h(c1, "Two measurement layers");
+    add(c1, ap("layers"));
     var exJ = cellOf(6, "EU"), m6 = mechById[6];
     var exU = UNITS.indexOf("apple_ios_appstore") >= 0 ? "apple_ios_appstore" : UNITS[0];
     var exIt = D.deFacto.items.filter(function (x) { return x.unit === exU && x.mechanism === 6; })[0];
-    c1.appendChild(fold("De Jure Contestability", "what the legal framework requires", [
-      defs.deJure ? quoteP(defs.deJure, MANSRC + ", section " + defs.section) : null,
+    c1.appendChild(fold("De Jure Contestability", "definition and an example from the data", [
+      ap("def_dejure"),
       exJ ? aiP("Example: in " + DJ_DATE + " the European Union scores " + glyph(exJ.score) + " on " + m6.name.toLowerCase() + " (category " + m6.id + "), on the basis of " + (exJ.instrument_basis || "its legal record") + ".") : null,
       exJ ? recordButton("Open this record", function () { matrixOrder = CODES; openCell(6, "EU"); }) : null]));
-    c1.appendChild(fold("De Facto Contestability", "what is observed in practice", [
-      defs.deFacto ? quoteP(defs.deFacto, MANSRC + ", section " + defs.section) : null,
+    c1.appendChild(fold("De Facto Contestability", "definition and an example from the data", [
+      ap("def_defacto"),
       exIt && exIt.status === "scored" ? aiP("Example: for " + unitById[exU].name + " in " + theName(unitById[exU].jurisdiction) + ", indicator " + m6.code + " (" + m6.indicator.toLowerCase() + ") is scored " +
         glyph(exIt.pre) + " in " + DF_BASE + " and " + glyph(exIt.post) + " in " + DF_NOW + ".") : null,
       exIt ? recordButton("Open this record", function () { openIndicator(exU, 6); }) : null]));
-    var two = el("div", "two-col"), yes = el("div"), no = el("div");
-    yes.appendChild(el("h4", null, "What the index measures"));
-    add(yes, mq("deJureObjective"), mq("deFactoObjective"));
-    no.appendChild(el("h4", null, "What it does not measure"));
-    add(no, mq("deJureObjective", "notCompliance"));
-    if (MAN.indexMeaning && num(mVal("de_facto", "google_search", "current", "overall")) === "0.52") add(no, mq("indexMeaning"));
-    add(two, yes, no);
-    c1.appendChild(two);
+    h(c1, "Scope");
+    add(c1, ap("market"));
+    c1.appendChild(aiP(["At present the index covers " + words(nJ) + " jurisdictions on the law in force in " + DJ_DATE + " (",
+      link("#/explore/dejure", "De Jure"), ") and " + words(nU) + " gatekeeper–market pairs on market conditions in " + DF_BASE + " and " + DF_NOW + " (",
+      link("#/explore/defacto", "De Facto"), "): " + listText(UNITS.map(function (u) { return unitById[u].name; })) + "."]));
 
     /* ---- 2. Measurement Framework */
-    var c2 = card("framework", "2. Measurement Framework",
-      aiP(words(nD).charAt(0).toUpperCase() + words(nD).slice(1) + " dimensions, " + words(nM) + " mechanisms and two measurement layers. Each mechanism has one De Jure obligation category " +
-          "and one De Facto indicator, so the two layers can be read side by side. Open a dimension for its categories, and a category for its definition, both operationalisations and its data."));
-    c2.appendChild(el("h4", null, "The terms"));
-    var hz = MAN.hierarchy || {};
-    [["Contestability dimension", hz.dimension], ["Contestability mechanism", hz.mechanism], ["De Jure obligation category", hz.obligationCategory, hz.legalBasis],
-     ["De Facto indicator", hz.indicator]].forEach(function (x) {
-      if (!x[1]) return;
-      c2.appendChild(fold(x[0], null, [quoteP(x[1], MANSRC + ", section " + hz.section), x[2] ? quoteP(x[2], MANSRC + ", section " + hz.section) : null]));
-    });
-    c2.appendChild(fold("Units of observation", "what one record describes", [mq("units", "deJure"), mq("units", "deJureMarket"), mq("units", "deFacto")]));
-    c2.appendChild(el("h4", null, "The hierarchy (open a dimension, then a category)"));
+    var c2 = sec("framework", "2. Measurement Framework");
+    add(c2, ap("stages"));
+    add(c2, alist("questions", true, function (i) {
+      var d = D.dimensions[i];
+      return d ? more("#/methodology/" + d.id, d.id + " · " + d.name) : null;
+    }));
+    add(c2, ap("complementary"));
+    h(c2, "Dimensions, mechanisms, obligation categories and indicators");
+    add(c2, ap("levels"), ap("two_perspectives"), ap("purposes"), ap("classification"));
+    c2.appendChild(tabCap("Table 1.", "The " + words(nD) + " dimensions and their " + words(nM) + " mechanisms"));
+    c2.appendChild(aiP("Each mechanism has one De Jure obligation category and one De Facto indicator, so the two layers can be read side by side. " +
+      "Open a dimension for its categories, and a category for its definition, both operationalisations and its data."));
     D.dimensions.forEach(function (d, i) { c2.appendChild(dimensionEntry(d, i)); });
+    h(c2, "Units of observation");
+    add(c2, ap("units"), ap("unit_dejure"), ap("unit_dejure_market"), ap("unit_defacto"));
+    var chain = ART.chain || [], djm = D.periods["de_jure|market|current"] || {}, djb = D.periods["de_jure|market|baseline"] || {};
+    if (chain.length === 3) {
+      c2.appendChild(tabCap("Figure 1.", "The three levels of measurement and what each covers at present"));
+      var cf = el("div", "flow three");
+      [[chain[0][2], nJ + " jurisdictions × " + nM + " obligation categories, " + DJ_DATE, "#/explore/dejure", "Explore De Jure"],
+       [chain[1][2], nU + " gatekeeper–market pairs, " + month(djb.observed) + " and " + month(djm.observed), "#/explore/compare?type=gap", "Law beside market"],
+       [chain[2][2], nU + " pairs × " + nM + " indicators, " + DF_BASE + " and " + DF_NOW, "#/explore/defacto", "Explore De Facto"]].forEach(function (x) {
+        cf.appendChild(add(el("div", "st"), el("b", null, x[0]), x[1], el("br"), more(x[2], x[3])));
+      });
+      c2.appendChild(cf);
+    }
+    add(c2, ap("alignment"));
 
     /* ---- 3. De Jure Scoring */
-    var c3 = card("dejure", "3. De Jure Scoring");
-    add(c3, mq("deJureObjective"));
-    c3.appendChild(el("h4", null, "Three factors"));
-    var ff = MAN.deJureFactors || {}, fr = el("div", "flow three");
-    [["Existence", ff.existence], ["Scope", ff.scope], ["Enforceability", ff.enforceability]].forEach(function (x) {
-      fr.appendChild(add(el("div", "st"), el("b", null, x[0]), x[1] ? "“" + cap(x[1]) + ".”" : ""));
-    });
-    c3.appendChild(fr);
+    var c3 = sec("dejure", "3. De Jure Scoring");
+    add(c3, ap("dj_objective"));
+    h(c3, "From legal text to a coded record");
+    add(c3, ap("dj_stages_1"), ap("dj_stages_2", more("#/data/library", "The instruments and provisions on record")), ap("dj_sources"));
+    h(c3, "Three factors");
+    add(c3, ap("dj_factors_lead"), alist("dj_factors"), ap("dj_scale"));
     var hf = HB.deJureFactors;
     if (hf) {
-      c3.appendChild(el("h4", null, "Scoring criteria (expand a factor)"));
+      c3.appendChild(tabCap("Table 2.", "Scoring criteria for the three factors"));
+      var ct = el("table", "plain criteria");
+      ct.appendChild(add(el("tr"), el("th", null, "Factor"), scoreTh(0), scoreTh(0.5), scoreTh(1)));
       [["Existence", "existence"], ["Scope", "scope"], ["Enforceability", "enforceability"]].forEach(function (x) {
         var f = hf[x[1]];
         if (!f) return;
-        var t = el("table", "plain");
-        t.appendChild(add(el("tr"), el("th", null, "Score"), el("th", null, "Criterion")));
-        [[0, "0"], [0.5, "0.5"], [1, "1"]].forEach(function (sc) {
-          t.appendChild(add(el("tr"), add(el("td"), paint(el("span", "pill-inline", glyph(sc[0])), sc[0])), el("td", null, "“" + f[sc[1]] + "”")));
-        });
-        c3.appendChild(fold(x[0], f.question, [t]));
+        ct.appendChild(add(el("tr"), add(el("td", "fac"), el("strong", null, x[0]), el("span", null, f.question)),
+          el("td", null, f["0"]), el("td", null, f["0.5"]), el("td", null, f["1"])));
       });
+      c3.appendChild(add(el("div", "table-scroll"), ct));
     }
-    c3.appendChild(el("h4", null, "The 0 / ½ / 1 rubric"));
-    var ds = MAN.deJureScale || {}, rt = el("table", "plain");
-    rt.appendChild(add(el("tr"), el("th", null, "Score"), el("th", null, "Interpretation")));
-    [[0, "0"], [0.5, "0.5"], [1, "1"]].forEach(function (x) {
-      rt.appendChild(add(el("tr"), add(el("td"), paint(el("span", "pill-inline", glyph(x[0])), x[0])), el("td", null, ds[x[1]] ? "“" + ds[x[1]] + "”" : "")));
+    // One real record for each score, so the criteria can be seen applied.
+    var exRows = [];
+    [1, 0.5, 0].forEach(function (sv) {
+      var found = null;
+      ["JP", "UK", "KR", "TR", "US", "CN", "AU", "EU", "DE"].some(function (jc) {
+        if (!jurByCode[jc]) return false;
+        var m = D.mechanisms.filter(function (mm) { var x = cellOf(mm.id, jc); return x && x.score === sv && x.instrument_basis && (sv !== 0.5 || x.binding.length < 3); })[0];
+        if (m) found = { j: jc, m: m, x: cellOf(m.id, jc) };
+        return !!m;
+      });
+      if (found) exRows.push(found);
     });
-    c3.appendChild(rt);
-    c3.appendChild(el("h4", null, "From three factors to a category score"));
-    c3.appendChild(hq("minRule") || aiP("Each factor is scored 0, ½ or 1, and the category takes the lowest of the three. The lowest factor sets the score because the three factors " +
-      "complement each other: a rule that reaches every firm but cannot be enforced protects little, and strong enforcement cannot make up for a rule that does not exist."));
-    add(c3, hq("mechanismRoutes"));
-    c3.appendChild(el("h4", null, "Aggregation"));
-    add(c3, mq("aggregationDimension"), mq("aggregationOverall"));
+    var exFold = fold("See examples of each score", words(exRows.length) + " records from the database", []);
+    exRows.forEach(function (r) {
+      var p = el("p");
+      add(p, paint(el("span", "pill-inline", glyph(r.x.score)), r.x.score), " ", el("strong", null, jurName[r.j] + " · " + r.m.id + ". " + r.m.name),
+          ": Existence " + r.x.existence + ", Scope " + r.x.scope + ", Enforceability " + r.x.enforceability + ". " + (r.x.instrument_basis || "") + " ");
+      p.appendChild(recordButton("Open this record", function () { matrixOrder = CODES; openCell(r.m.id, r.j); }));
+      exFold.body.appendChild(p);
+      if (r.x.factor_rationale) exFold.body.appendChild(el("p", "small muted", r.x.factor_rationale));
+    });
+    c3.appendChild(exFold);
+    h(c3, "From three factors to a category score");
+    add(c3, ap("dj_min_lead"),
+      formula(el("i", null, "q"), " = min { ", el("i", null, "E"), ", ", el("i", null, "S"), ", ", el("i", null, "Enf"), " }",
+        el("span", "where", "E, S and Enf: the scores for Existence, Scope and Enforceability")),
+      ap("dj_min"), ap("dj_domain"), ap("dj_decomposition"));
+    var ds = MAN.deJureScale;
+    if (ds) {
+      c3.appendChild(tabCap("Table 3.", "The category score"));
+      var rt = el("table", "plain");
+      rt.appendChild(add(el("tr"), el("th", "sc", "Score"), el("th", null, "Interpretation")));
+      [[0, "0"], [0.5, "0.5"], [1, "1"]].forEach(function (x) {
+        rt.appendChild(add(el("tr"), add(el("td", "sc"), paint(el("span", "pill-inline", glyph(x[0])), x[0])), el("td", null, ds[x[1]] || "")));
+      });
+      c3.appendChild(rt);
+    }
+    h(c3, "Legal forms");
+    add(c3, ap("dj_forms"));
+    var lf = el("table", "plain");
+    lf.appendChild(add(el("tr"), el("th", null, "Form"), el("th", null, "Definition"), el("th", null, "Typical factor treatment")));
+    D.legalForms.forEach(function (f) {
+      lf.appendChild(add(el("tr"), el("td", "mono", f.code), add(el("td", "small"), el("strong", null, f.name), el("div", null, f.definition)), el("td", "small muted", f.signature)));
+    });
+    c3.appendChild(fold("The " + words(D.legalForms.length) + " legal forms", "the form of the instrument each score rests on", [
+      ap("dj_forms_signature"), add(el("div", "table-scroll"), lf)]));
+    h(c3, "Aggregation");
+    add(c3, ap("agg_dimension_lead"),
+      formula(sub("D", "d"), " = ( 1 / ", sub("N", "d"), " ) · Σ ", sub("q", "i"),
+        el("span", "where", "N: the number of applicable scored items in dimension d")),
+      ap("agg_overall_lead"),
+      formula(el("i", null, "C"), " = ¼ ( ", sub("D", "1"), " + ", sub("D", "2"), " + ", sub("D", "3"), " + ", sub("D", "4"), " )"),
+      ap("agg_equal"));
+    c3.appendChild(tabCap("Figure 2.", "From the legal text to the De Jure index"));
     var flow = el("div", "flow");
     [["Legal text", "Statutes, regulations, orders and court remedies in force in " + DJ_DATE + "."],
      ["Three factors", "Existence, Scope and Enforceability, each scored 0, ½ or 1."],
@@ -2721,80 +2800,45 @@ window.CI_BOOT = function () {
       ex.appendChild(recordButton("Open this record", function () { matrixOrder = CODES; openCell(exM.id, exCode); }));
       c3.appendChild(ex);
     }
-    // One real record for each score, so the rubric can be seen applied.
-    var exRows = [];
-    [1, 0.5, 0].forEach(function (sv) {
-      var found = null;
-      ["JP", "UK", "KR", "TR", "US", "CN", "AU", "EU", "DE"].some(function (jc) {
-        if (!jurByCode[jc]) return false;
-        var m = D.mechanisms.filter(function (mm) { var x = cellOf(mm.id, jc); return x && x.score === sv && x.instrument_basis && (sv !== 0.5 || x.binding.length < 3); })[0];
-        if (m) found = { j: jc, m: m, x: cellOf(m.id, jc) };
-        return !!m;
-      });
-      if (found) exRows.push(found);
-    });
-    var exFold = fold("See examples of each score", "three records from the database", []);
-    exRows.forEach(function (r) {
-      var p = el("p");
-      add(p, paint(el("span", "pill-inline", glyph(r.x.score)), r.x.score), " ", el("strong", null, jurName[r.j] + " · " + r.m.id + ". " + r.m.name),
-          ": Existence " + r.x.existence + ", Scope " + r.x.scope + ", Enforceability " + r.x.enforceability + ". " + (r.x.instrument_basis || "") + " ");
-      p.appendChild(recordButton("Open this record", function () { matrixOrder = CODES; openCell(r.m.id, r.j); }));
-      exFold.body.appendChild(p);
-      if (r.x.factor_rationale) exFold.body.appendChild(el("p", "small muted", r.x.factor_rationale));
-    });
-    c3.appendChild(exFold);
-    var lf = el("table", "plain");
-    lf.appendChild(add(el("tr"), el("th", null, "Form"), el("th", null, "Definition"), el("th", null, "Typical factor treatment")));
-    D.legalForms.forEach(function (f) {
-      lf.appendChild(add(el("tr"), el("td", "mono", f.code), add(el("td", "small"), el("strong", null, f.name), el("div", null, f.definition)), el("td", "small muted", f.signature)));
-    });
-    c3.appendChild(fold("Legal forms", "the form of the instrument each score rests on", [
-      hq("legalForms") || aiP("Each De Jure score also records the form of the instrument it rests on. The form is a benchmark for coding; the legal text decides the score."),
-      add(el("div", "table-scroll"), lf), hq("sectoralAtMarketLevel")]));
+    h(c3, "Market-level De Jure");
+    add(c3, ap("dj_market", more("#/explore/compare?type=gap", "Market-level De Jure beside De Facto")));
     var vd = link("#/explore/dejure", "View associated data: every De Jure score →");
     vd.className = "btn btn-outline btn-sm";
     c3.appendChild(add(el("p", "entry-actions"), vd));
 
     /* ---- 4. De Facto Scoring */
-    var c4 = card("defacto", "4. De Facto Scoring");
-    add(c4, mq("deFactoObjective"));
-    c4.appendChild(el("h4", null, "Observable mechanisms: how indicators are chosen"));
-    var selp = MAN.deFactoSelection || {}, f3 = el("div", "flow three");
-    [["Observability", selp.observability], ["Representativeness", selp.representativeness], ["Comparability", selp.comparability]].forEach(function (x) {
-      f3.appendChild(add(el("div", "st"), el("b", null, x[0]), x[1] ? "“" + cap(x[1]) + ".”" : ""));
-    });
-    c4.appendChild(f3);
-    c4.appendChild(el("h4", null, "Scoring rules"));
+    var c4 = sec("defacto", "4. De Facto Scoring");
+    add(c4, ap("df_objective"));
+    h(c4, "The observation: a gatekeeper–market pair at two dates");
+    add(c4, ap("df_pair"), ap("df_consequences"));
+    c4.appendChild(aiP("Each pair is scored at two dates: " + DF_BASE + ", before the obligations of the Digital Markets Act applied in March 2024, and " + DF_NOW + "."));
+    add(c4, ap("df_dates", more("#/explore/defacto?period=change", "The change between the two dates")));
+    h(c4, "Observable indicators");
+    add(c4, ap("df_indicators"), ap("df_selection_lead"), alist("df_selection"), ap("df_once"));
+    h(c4, "Scoring rule");
     var fs = MAN.deFactoScale || {}, st = el("table", "plain");
-    st.appendChild(add(el("tr"), el("th", null, "Score"), el("th", null, "Interpretation")));
+    c4.appendChild(tabCap("Table 4.", "The De Facto scale"));
+    st.appendChild(add(el("tr"), el("th", "sc", "Score"), el("th", null, "Condition")));
     [[0, "0"], [0.5, "0.5"], [1, "1"]].forEach(function (x) {
-      st.appendChild(add(el("tr"), add(el("td"), paint(el("span", "pill-inline", glyph(x[0])), x[0])),
-        el("td", null, (fs[x[1]] ? "“" + fs[x[1]] + "”" : "") + (x[1] === "0.5" && MAN.deFactoFriction ? " “" + MAN.deFactoFriction.text + ".”" : ""))));
+      st.appendChild(add(el("tr"), add(el("td", "sc"), paint(el("span", "pill-inline", glyph(x[0])), x[0])),
+        el("td", null, (fs[x[1]] || "") + (x[1] === "0.5" && MAN.deFactoFriction ? " " + MAN.deFactoFriction.text + "." : ""))));
     });
-    st.appendChild(add(el("tr"), add(el("td"), el("span", "ind na sample", "n/a")), el("td", null, fs["Not Applicable"] ? "Not Applicable. “" + fs["Not Applicable"] + "”" : "Not Applicable")));
-    st.appendChild(add(el("tr"), add(el("td"), el("span", "ind miss sample", "M")), el("td", null, fs.Missing ? "Missing. “" + fs.Missing + "”" : "Missing")));
+    st.appendChild(add(el("tr"), add(el("td", "sc"), el("span", "ind na sample", "n/a")), add(el("td"), el("strong", null, "Not Applicable. "), fs["Not Applicable"] || "")));
+    st.appendChild(add(el("tr"), add(el("td", "sc"), el("span", "ind miss sample", "M")), add(el("td"), el("strong", null, "Missing. "), fs.Missing || "")));
     c4.appendChild(st);
-    add(c4, hq("adoption"), hq("scoredOnce"), hq("aggregation"));
-    c4.appendChild(fold("What is left out of the score", "market share", [hq("marketShare")]));
-    c4.appendChild(fold("What varies from market to market", "applicability, observation, competitive weight", [
-      HB.variation ? quoteP("Applicability. " + HB.variation.applicability, HBSRC + ", section " + HB.variation.section) : null,
-      HB.variation ? quoteP("Observation. " + HB.variation.observation, HBSRC + ", section " + HB.variation.section) : null,
-      HB.variation ? quoteP("Competitive weight. " + HB.variation.competitiveWeight, HBSRC + ", section " + HB.variation.section) : null]));
-    c4.appendChild(fold("Which gatekeeper is scored in which market", "the gatekeeper–market pair", [hq("gatekeeper"), hq("zeroVsAbsent")]));
-    c4.appendChild(fold("Evidence standards", "what counts as evidence of a market condition", [hq("evidence"), hq("evidence", "penalty"), hq("evidence", "announced"), mq("deFactoEvidence")]));
-    c4.appendChild(el("h4", null, "Missing observations"));
-    add(c4, hq("applicability"), mq("notApplicableVsMissing"), mq("missingInformation"));
+    add(c4, ap("df_exercise"));
+    h(c4, "Applicability and missing evidence");
+    add(c4, ap("status_lead"), ap("status_na"), ap("status_missing"));
     var nSc = D.deFacto.items.filter(function (x) { return x.status === "scored"; }).length;
     var nMi = D.deFacto.items.filter(function (x) { return x.status === "missing"; }).length;
     var nNa = D.deFacto.items.filter(function (x) { return x.status === "not_applicable"; }).length;
-    c4.appendChild(aiP("In this dataset, of the " + D.deFacto.items.length + " indicator records (" + words(nU) + " pairs × " + words(nM) + " indicators), " + nSc +
-      " are scored, " + nMi + " are Missing and " + nNa + " are Not Applicable. A dimension is the mean of the indicators that could be scored, so an evidence gap does not count as a zero."));
-    c4.appendChild(el("h4", null, "Confidence"));
-    var cf = el("table", "plain"), cl = D.paper.confidenceLevels || {};
-    ["High", "Moderate", "Low"].forEach(function (k) { if (cl[k]) cf.appendChild(add(el("tr"), el("th", null, k), el("td", null, "“" + cap(cl[k]) + ".”"))); });
-    c4.appendChild(cf);
-    if (cl.note) c4.appendChild(quoteP(cl.note, "Working paper"));
-    // worked example: the first scored indicator of the first pair, as recorded
+    c4.appendChild(aiP(["In this dataset, of the " + D.deFacto.items.length + " indicator records (" + words(nU) + " pairs × " + words(nM) + " indicators), " + nSc +
+      " are scored, " + nMi + " are Missing and " + nNa + " are Not Applicable. ", more("#/explore/defacto", "Each record, by pair")]));
+    h(c4, "Evidence and confidence");
+    add(c4, ap("df_evidence"), ap("df_penalty"), ap("df_confidence"));
+    h(c4, "Aggregation");
+    add(c4, ap("df_aggregation"), ap("df_denominator"));
+    // worked example: one indicator of the first pair as recorded, then that pair's dimensions and index
     var weU = UNITS[0], weIt = D.deFacto.items.filter(function (x) { return x.unit === weU && x.status === "scored" && x.delta > 0; })[0];
     if (weIt) {
       var wm = mechById[weIt.mechanism], we = el("div", "example");
@@ -2803,10 +2847,27 @@ window.CI_BOOT = function () {
         (weIt.confidence ? ". Confidence: " + (CONF[weIt.confidence] || [0, weIt.confidence.toLowerCase()])[1] : "") + "."));
       we.appendChild(el("p", "small", weIt.evidence.length > 620 ? weIt.evidence.slice(0, 620).replace(/\s+\S*$/, "") + " …" : weIt.evidence));
       we.appendChild(recordButton("Open this record, with its sources", function () { openIndicator(weU, weIt.mechanism); }));
+      var wt = el("table", "plain"), allSc = 0, allN = 0;
+      wt.appendChild(add(el("tr"), el("th", null, "Dimension, " + DF_NOW), el("th", "num", "Indicators scored"), el("th", "num", "Score")));
+      D.dimensions.forEach(function (d) {
+        var its = D.deFacto.items.filter(function (x) { return x.unit === weU && mechById[x.mechanism].dimension === d.id; });
+        var sc = its.filter(function (x) { return x.status === "scored"; });
+        allSc += sc.length; allN += its.length;
+        wt.appendChild(add(el("tr"), el("td", null, d.id + " " + d.name), el("td", "num", sc.length + " of " + its.length),
+          el("td", "num", num(mVal("de_facto", weU, "current", d.id)))));
+      });
+      wt.appendChild(add(el("tr"), add(el("td"), el("strong", null, "Index: the mean of the " + words(nD) + " dimension scores")), el("td", "num", allSc + " of " + allN),
+        add(el("td", "num"), el("strong", null, num(mVal("de_facto", weU, "current", "overall"))))));
+      we.appendChild(el("p", "ex-next", "The same pair, from its indicators to the index. A dimension is the mean of the indicators that could be scored; Missing and Not Applicable indicators are left out."));
+      we.appendChild(wt);
       c4.appendChild(we);
     }
-    c4.appendChild(el("h4", null, "Indicator by indicator"));
-    c4.appendChild(el("p", "small muted", "Expand an indicator for what it observes and how it was scored for each gatekeeper–market pair. The rationale is the coded record; open it for the full text and its sources."));
+    h(c4, "Variation across markets");
+    add(c4, ap("var_lead"));
+    c4.appendChild(fold("What varies from market to market", "applicability, observation, competitive weight", [
+      ap("var_applicability"), ap("var_observation"), ap("var_weight")]));
+    h(c4, "Indicator by indicator");
+    c4.appendChild(aiP("Expand an indicator for what it observes and how it was scored for each gatekeeper–market pair. The rationale is the coded record; open it for the full text and its sources."));
     c4.appendChild(add(el("p", "chart-foot top"), dlButton("contestability_definitions.csv", ["category_id", "category_code", "dimension", "dimension_name", "category", "mechanism_description", "de_facto_indicator"],
       function () { return D.mechanisms.map(function (m) { return [m.id, m.code, m.dimension, dimById[m.dimension].name, m.name, m.description, m.indicator]; }); }, "Download the definitions (CSV)")));
     D.dimensions.forEach(function (d) {
@@ -2843,53 +2904,41 @@ window.CI_BOOT = function () {
     c4.appendChild(add(el("p", "entry-actions"), vf));
 
     /* ---- 5. Interpretation & Limitations */
-    var c5 = card("limits", "5. Interpretation & Limitations",
-      aiP("What the scores can and cannot support, with the data each note is about."));
+    var c5 = sec("limits", "5. Interpretation & Limitations");
     var ins = insights(), disc = D.paper.discrepancies || [], dfc = (D.paper.deFactoCompare || []).filter(function (x) { return !x.same; });
-    function notes(title, items) {
-      c5.appendChild(el("h4", null, title));
-      var g = el("div", "notes-grid");
-      items.forEach(function (n) {
-        if (!n) return;
-        var c = el("div", "note");
-        c.appendChild(el("h3", null, n[0]));
-        n[1].forEach(function (x) { if (x) c.appendChild(typeof x === "string" ? aiP(x) : x); });
-        if (n[2]) c.appendChild(add(el("p", "small note-link"), link(n[2][0], n[2][1] + " →")));
-        g.appendChild(c);
-      });
-      c5.appendChild(g);
+    add(c5, ap("lim_lead"));
+    h(c5, "Coverage");
+    add(c5, ap("lim_coverage", more("#/explore/defacto", "The gatekeeper–market pairs")), ap("lim_markets"),
+      ap("lim_evidence", more("#/explore/defacto?units=google_play&period=current", "Google Play, indicator by indicator")));
+    c5.appendChild(aiP([cap(words(nJ)) + " jurisdictions are assessed on the law. Areas shown in grey on the map have not been assessed, which is different from a score of zero. " +
+      "The 27 EU member states share the EU score; Germany also has its own national regime and its own score. ", more("#/explore/dejure?view=map", "The map")]));
+    h(c5, "Comparability");
+    add(c5, ap("lim_cross", more("#/explore/compare?type=mkt", "Compare markets")));
+    h(c5, "Aggregation assumptions");
+    add(c5, ap("lim_weights", more("#/explore/dejure?view=rank", "Scores by dimension")));
+    c5.appendChild(aiP([ins.precision.text + " ", more("#/explore/dejure?view=rank&dim=overall", "The ranking")]));
+    h(c5, "Interpretation");
+    add(c5, ap("lim_dejure"));
+    c5.appendChild(aiP(["The jurisdiction-level index and the market-level De Jure score of a pair are therefore different numbers and should not be compared with each other. ",
+      more("#/explore/compare?type=gap", "Market-level De Jure beside De Facto")]));
+    add(c5, ap("lim_descriptive", more("#/explore/defacto?period=change", "The change between the two dates")));
+    if (ART.lim_search && num(mVal("de_facto", "google_search", "current", "overall")) === "0.52") {
+      var se = el("div", "example");
+      se.appendChild(el("p", null, "Example, read from the database: " + unitById.google_search.name + ", De Facto index in " + DF_NOW + ": " +
+        num(mVal("de_facto", "google_search", "current", "overall")) + "."));
+      add(se, ap("lim_search", more("#/explore/defacto?units=google_search&period=current", "Google Search, indicator by indicator")));
+      c5.appendChild(se);
     }
-    notes("Coverage", [
-      ["Coverage of the De Facto layer", [mq("pilotLimitation"), mq("noJurisdictionDeFacto")], ["#/explore/defacto", "The gatekeeper–market pairs"]],
-      ["Nine jurisdictions; grey is not zero",
-       [cap(words(nJ)) + " jurisdictions are assessed on the law. Areas shown in grey on the map have not been assessed, which is different from a score of zero. " +
-        "The 27 EU member states share the EU score; Germany also has its own national regime and its own score."], ["#/explore/dejure?view=map", "The map"]],
-      ["Why these markets", [mq("marketRationale")], ["#/explore/defacto", "The De Facto dashboard"]]]);
-    notes("Comparability", [
-      HB.comparability ? ["De Facto scores across markets", [hq("comparability")], ["#/explore/compare?type=mkt", "Compare markets"]] : null,
-      ["The law as written, not compliance", [mq("deJureObjective", "notCompliance")], ["#/explore/compare?type=gap", "Law against market"]],
-      ["Two levels of De Jure", [mq("units", "deJureMarket"),
-        "The jurisdiction-level index and the market-level De Jure score of a pair are therefore different numbers and should not be compared with each other."],
-       ["#/explore/compare?type=gap", "Market-level De Jure beside De Facto"]]]);
-    notes("Aggregation assumptions", [
-      ["Equal weights", [mq("weighting"), mq("weighting", "marketSpecific")], ["#/explore/dejure?view=rank", "Scores by dimension"]],
-      ["The index moves in steps", [ins.precision.text], ["#/explore/dejure?view=rank&dim=overall", "The ranking"]],
-      ["A score is not a weight", [mq("scoresNotWeights")], ["#/methodology/framework", "The hierarchy"]]]);
-    notes("Interpretation", [
-      ["Before and after, not cause and effect",
-       ["The De Facto observations compare " + DF_BASE + ", before the Digital Markets Act's obligations applied in March 2024, with " + DF_NOW +
-        ". A change between the two dates happened after the Act applied; the index does not show that the Act caused it."], ["#/explore/defacto?period=change", "The change between the two dates"]],
-      MAN.indexMeaning && num(mVal("de_facto", "google_search", "current", "overall")) === "0.52"
-        ? ["What a De Facto score does not say", [mq("indexMeaning")], ["#/explore/defacto?units=google_search&period=current", "Google Search"]] : null,
-      disc.length || dfc.length ? ["Differences from the working paper",
-        ["The working paper (July 2026) was compiled from an earlier state of the database. " + disc.length + " of " + nJ + " jurisdictions and " + dfc.length + " of " +
-         (D.paper.deFactoCompare || []).length + " pairs differ from its tables; each difference is listed with its reason."], ["#/data/docs", "The differences"]] : null]);
-
-    c5.appendChild(el("h4", null, "Validation"));
+    if (disc.length || dfc.length) {
+      c5.appendChild(aiP(["The working paper (July 2026) was compiled from an earlier state of the database. " + disc.length + " of " + nJ + " jurisdictions and " + dfc.length + " of " +
+        (D.paper.deFactoCompare || []).length + " pairs differ from its tables; each difference is listed with its reason. ", more("#/data/docs", "The differences")]));
+    }
+    h(c5, "Coding judgment and validation");
+    add(c5, ap("lim_judgment"));
     c5.appendChild(tbdP("Validation of the measurement (for example agreement between coders and robustness of the rankings to the weighting) will be reported here."));
 
     /* ---- 6. Technical Documentation */
-    var c6 = card("docs", "6. Technical Documentation");
+    var c6 = sec("docs", "6. Technical Documentation");
     c6.appendChild(versionBox());
     var dl = el("ul", "doc-list");
     function doc(title, note, action) { dl.appendChild(add(el("li"), el("strong", null, title), note ? el("span", "muted small", " · " + note) : null, action ? " " : null, action)); }

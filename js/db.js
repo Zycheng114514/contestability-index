@@ -232,7 +232,7 @@
         codingStates: paper.codingStates, dimensionQuestions: paper.dimensionQuestions,
         reportingRequirements: paper.reportingRequirements, handbook: paper.handbook,
         confidenceLevels: paper.confidenceLevels, manual: paper.manual || {}, handbookText: paper.handbookText || {},
-        documents: paper.documents || [], discrepancies: discrepancies, deFactoCompare: dfCompare
+        documents: paper.documents || [], article: paper.article || {}, discrepancies: discrepancies, deFactoCompare: dfCompare
       }
     };
   }

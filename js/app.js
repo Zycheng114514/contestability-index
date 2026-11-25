@@ -245,7 +245,12 @@ window.CI_BOOT = function () {
     col("Repository and documentation", [add(el("p"), extLink(REPO, "Site repository on GitHub")),
                                          add(el("p"), extLink(APPENDIX, "Online appendix")),
                                          add(el("p"), link("#/methodology", "Methodology"), " · ", link("#/data/docs", "Data documentation"))]);
-    col("License", [tbdP("License for the data and the site.")]);
+    // What each license covers is set out in the repository's LICENSE-DATA.md.
+    col("License", [add(el("p"), "Data, documentation and text: ",
+                        extLink("https://creativecommons.org/licenses/by/4.0/", "CC\u00a0BY\u00a04.0"),
+                        ". Code: ", extLink(REPO + "/blob/main/LICENSE", "MIT"), "."),
+                    el("p", null, "The working paper remains © its authors. Legal texts and quoted sources remain " +
+                                  "under the terms of their publishers.")]);
     f.appendChild(g);
     var p = el("p", "foot-note");
     add(p, "Data: ", link(D.meta.dbUrl, "contestability.db"), " (SQLite, built " + D.meta.built + ") · ",

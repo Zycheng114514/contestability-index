@@ -10,3 +10,7 @@ The layout follows the WJP Rule of Law Index site and the colours and type follo
 no code or text is taken from either. Paragraphs that start with `[AI generated]` are drafts the team has not yet reviewed.
 
 The page must be served over HTTP; opening `index.html` as a file does not work.
+
+## License
+
+The data, the documentation and the text of the site are under the [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/); the code is under the [MIT License](LICENSE). The working paper remains © its authors, and legal texts and quoted sources remain under the terms of their publishers. [LICENSE-DATA.md](LICENSE-DATA.md) lists what each license covers and the third-party components.

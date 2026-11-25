@@ -7,9 +7,10 @@
    #/methodology[/<section or category code>]; #/applications[/<id>]; #/data[/<section>]; #/legal/<code>; #/about.
    The state of Explore Data (dimension, selections, period) is kept in the address, so a view can be shared and is
    kept when moving between views.
-   Text the team has not supplied is drafted here and starts with the marker [AI generated]; the figures inside those
-   drafts are computed from the database when the page opens, so they follow the data. Text quoted from the
-   Methodology Manual or the working paper is quoted as such, with its section. */
+   Text written for the site: until 2026-11-24 every such paragraph started with the marker [AI generated]. That day
+   Chris had all of them reconsidered and approved, so none carries the marker now (record: website/planning/
+   AI_TEXT_REVIEW_2026-11-24.md). A new draft still goes in with aiP (marked) until he has reviewed it, then okP.
+   The figures inside these paragraphs are computed from the database when the page opens, so they follow the data. */
 window.CI_BOOT = function () {
   "use strict";
   var D = window.CI_DATA, W = window.CI_WORLD;
@@ -80,7 +81,7 @@ window.CI_BOOT = function () {
     if (arr.length < 2) return arr.join("");
     return arr.slice(0, -1).join(", ") + " and " + arr[arr.length - 1];
   }
-  // A paragraph drafted for the team to review. It opens with the [AI generated] marker; parts are strings or nodes.
+  // A new paragraph that Chris has not reviewed yet. It opens with the [AI generated] marker; parts are strings or nodes.
   function aiP(parts, cls) {
     var p = el("p", cls);
     p.appendChild(el("span", "ai-tag", AI));
@@ -88,7 +89,8 @@ window.CI_BOOT = function () {
     (Array.isArray(parts) ? parts : [parts]).forEach(function (x) { add(p, x); });
     return p;
   }
-  // A paragraph written for the site that Chris has reviewed and approved: it carries no marker (his rule of 2026-11-24).
+  // A paragraph written for the site that Chris has reviewed and approved: it carries no marker (his rule of 2026-11-24;
+  // all paragraphs then on the site were reviewed that day).
   function okP(parts, cls) {
     var p = el("p", cls);
     (Array.isArray(parts) ? parts : [parts]).forEach(function (x) { add(p, x); });
@@ -243,7 +245,7 @@ window.CI_BOOT = function () {
     col("Repository and documentation", [add(el("p"), extLink(REPO, "Site repository on GitHub")),
                                          add(el("p"), extLink(APPENDIX, "Online appendix")),
                                          add(el("p"), link("#/methodology", "Methodology"), " · ", link("#/data/docs", "Data documentation"))]);
-    col("Licence", [tbdP("Licence for the data and the site.")]);
+    col("License", [tbdP("License for the data and the site.")]);
     f.appendChild(g);
     var p = el("p", "foot-note");
     add(p, "Data: ", link(D.meta.dbUrl, "contestability.db"), " (SQLite, built " + D.meta.built + ") · ",
@@ -1321,7 +1323,7 @@ window.CI_BOOT = function () {
       });
       p.appendChild(copy);
       p.appendChild(el("h4", null, "The dataset"));
-      p.appendChild(tbdP("How to cite the dataset itself, and its licence. Until then, cite the working paper and give the version below."));
+      p.appendChild(tbdP("How to cite the dataset itself, and its license. Until then, cite the working paper and give the version below."));
       p.appendChild(el("h4", null, "Version"));
       p.appendChild(versionBox());
       p.appendChild(add(el("p", "small"), link("#/data/docs", "Documentation, data dictionary and update history →")));
@@ -1405,7 +1407,8 @@ window.CI_BOOT = function () {
       text: (allFull ? "In " + DJ_DATE + " EU law requires all " + words(nM) + " obligations in each of the three markets: the market-level De Jure score is " +
                num(1) + " for every pair. " : "") +
             "The " + DF_NOW + " De Facto scores run from " + num(Math.min.apply(null, dfs)) + " to " + num(Math.max.apply(null, dfs)) +
-            ", so the implementation gap, De Jure minus De Facto, is between " + num(Math.min.apply(null, gaps)) + " and " + num(Math.max.apply(null, gaps)) + "."
+            ", so the implementation gap, De Jure minus De Facto, is between " + num(Math.min.apply(null, gaps)) + " and " + num(Math.max.apply(null, gaps)) +
+            "; each figure is rounded to two decimals."
     };
 
     var pv = prevalence();
@@ -1438,7 +1441,7 @@ window.CI_BOOT = function () {
     };
 
     // How fine the index is: one half-point step in one category moves the index by 0.5 / (categories in the
-    // dimension) / (number of dimensions). Neighbours in the ranking that are closer than the smallest step are named.
+    // dimension) / (number of dimensions). Neighbors in the ranking that are closer than the smallest step are named.
     var steps = DIMS.map(function (d) { return 0.5 / D.mechanisms.filter(function (m) { return m.dimension === d; }).length / nD; });
     var minStep = Math.min.apply(null, steps), maxStep = Math.max.apply(null, steps), close = [];
     for (var i = 1; i < rk.length; i++) {
@@ -1448,9 +1451,10 @@ window.CI_BOOT = function () {
     o.precision = {
       text: "One half-point step in one category moves a jurisdiction's index by " + num(minStep, 3) + " to " + num(maxStep, 3) +
             ", depending on how many categories its dimension has. " +
-            (close.length ? "Neighbours in the ranking that are closer than the smallest step: " + close.map(function (x) {
+            (close.length ? "Neighbors in the ranking that are closer than the smallest step: " + close.map(function (x) {
               return theName(x[0]) + " (" + num(val(x[0], "overall"), 3) + ") and " + theName(x[1]) + " (" + num(val(x[1], "overall"), 3) + ")";
-            }).join("; ") + ". Their order should not be read as a difference." : "No two neighbours in the ranking are closer than the smallest step.")
+            }).join("; ") + ". A gap of that size is smaller than the effect of one half-point change in a single category." :
+               "No two neighbors in the ranking are closer than the smallest step.")
     };
     return (INS = o);
   }
@@ -1478,7 +1482,7 @@ window.CI_BOOT = function () {
     var left = el("div"), right = el("div");
     left.appendChild(el("p", "sec-kicker", "Introduction"));
     left.appendChild(el("h2", "sec-head", "What the index measures"));
-    left.appendChild(aiP("The Contestability Index measures the opportunity for incumbent positions in digital markets to be challenged, rather than market " +
+    left.appendChild(okP("The Contestability Index measures the opportunity for incumbent positions in digital markets to be challenged, rather than market " +
       "structure or outcomes. It scores " + words(nM) + " mechanisms, grouped into " + words(nD) + " dimensions, from two sides: what the law requires and what is observed in the market."));
     /* coverage summary: each figure is an entry point */
     var cov = el("div", "cov-grid");
@@ -1503,7 +1507,7 @@ window.CI_BOOT = function () {
     function layerCard(title, tag, defn, facts, href, go2, methHref) {
       var c = el("div", "layer-card");
       add(c, el("h3", null, title), el("p", "tag", tag));
-      c.appendChild(aiP(defn, "layer-def"));
+      c.appendChild(okP(defn, "layer-def"));
       var f = el("div", "mfacts");
       facts.forEach(function (x) { add(f, el("span", null, x[0]), el("b", null, x[1])); });
       c.appendChild(f);
@@ -1514,13 +1518,13 @@ window.CI_BOOT = function () {
       return c;
     }
     lg.appendChild(layerCard("De Jure", "What the legal framework requires",
-      "De Jure scores describe the law as written. For each jurisdiction they record how far its laws and regulations require large digital platforms " +
-      "to leave room for rivals to enter and expand.",
+      "De Jure scores describe the law as written. For each jurisdiction they record how far its laws, regulations and platform obligations create " +
+      "opportunities for rival firms to enter and expand.",
       [["Unit", nJ + " jurisdictions × " + nM + " obligation categories"], ["Observed", DJ_DATE]],
       "#/explore/dejure", "Explore legal scores", "#/methodology/dejure"));
     lg.appendChild(layerCard("De Facto", "What is observed in practice",
-      "De Facto scores describe the market as observed. For each gatekeeper and market they record whether rivals can in practice enter, grow and compete, " +
-      "given the technical, economic and behavioural conditions in that market.",
+      "De Facto scores describe the market as observed. For each gatekeeper and market they record whether rivals can realistically enter, grow and compete, " +
+      "given the technological, economic and behavioral conditions in that market.",
       [["Unit", nU + " gatekeeper–market pairs × " + nM + " indicators"], ["Observed", DF_BASE + " and " + DF_NOW]],
       "#/explore/defacto", "Explore market scores", "#/methodology/defacto"));
     w2.appendChild(lg);
@@ -1530,8 +1534,8 @@ window.CI_BOOT = function () {
     /* framework preview: each layer from its sources to the index (the steps of Coding Handbook II.B and III) */
     var s3 = section(null, "framework"), w3 = el("div", "wrap");
     head(w3, "Measurement framework", "Understanding the measurement");
-    w3.appendChild(aiP("The framework has " + words(nD) + " dimensions of competitive friction and " + words(nM) + " mechanisms. Each mechanism has one legal obligation " +
-      "category (De Jure) and one observable indicator (De Facto). The two layers are built in the same order, from the sources to the index.", "flow-lead"));
+    w3.appendChild(okP("The framework has " + words(nD) + " dimensions of competitive friction and " + words(nM) + " mechanisms. Each mechanism has one legal obligation " +
+      "category (De Jure) and one observable indicator (De Facto). The two rows below follow each layer from its sources to its index.", "flow-lead"));
     function chain(label, steps) {
       w3.appendChild(el("p", "flow-label", label));
       var flow = el("div", "flow six");
@@ -1565,7 +1569,7 @@ window.CI_BOOT = function () {
     var s4 = section("alt", "featured"), w4 = el("div", "wrap");
     head(w4, "Featured data", "De Jure index of the " + words(nJ) + " jurisdictions");
     var fc = el("div", "kp"), ft = el("div"), fv = el("div", "viz");
-    ft.appendChild(aiP("Each bar is one jurisdiction's De Jure index in " + DJ_DATE + ": the mean of its " + words(nD) + " dimension scores, from 0 (no obligation category in the law) to 1 " +
+    ft.appendChild(okP("Each bar is one jurisdiction's De Jure index in " + DJ_DATE + ": the mean of its " + words(nD) + " dimension scores, from 0 (no obligation category in the law) to 1 " +
       "(all " + words(nM) + " required in full). A score records the law as written, not compliance or market outcomes. Hover over a bar for the dimensions; click it for the profile."));
     var fa = link("#/explore/dejure?view=rank&dim=overall", "Open the full chart →");
     fa.className = "btn btn-outline";
@@ -1688,7 +1692,7 @@ window.CI_BOOT = function () {
       viewSeg.set(S.view);
       stageHead.appendChild(chartHead(
         (S.view === "map" ? "Map of " : "Jurisdictions ranked by ") + measure() + ", " + DJ_DATE,
-        S.view === "map" ? "Hover over a jurisdiction for its scores, click to open its profile. Grey areas have not been assessed."
+        S.view === "map" ? "Hover over a jurisdiction for its scores, click to open its profile. Gray areas have not been assessed."
                          : "Hover over a jurisdiction for its scores, click to open its profile.",
         [helpLink("#/methodology/" + (S.dim === "overall" ? "dejure" : S.dim), "How " + measure() + " is measured"),
          dlButton("contestability_dejure_" + S.dim + ".csv", CSV.dejureHeader, function () { return CSV.dejureRows(CODES, S.dim); })]));
@@ -2034,7 +2038,7 @@ window.CI_BOOT = function () {
     host.appendChild(s);
 
     /* dimension charts: where the selected stand among all the jurisdictions */
-    host.appendChild(chartHead("Each dimension among all " + words(nJ) + " jurisdictions", "Coloured: the selected jurisdictions. Grey: the others. Click a dot for the profile.",
+    host.appendChild(chartHead("Each dimension among all " + words(nJ) + " jurisdictions", "Colored: the selected jurisdictions. Gray: the others. Click a dot for the profile.",
       [dlButton("contestability_dejure_all_jurisdictions.csv", CSV.indexHeader, function () { return CSV.indexRows().filter(function (r) { return r[1] === "jurisdiction"; }); })]));
     var w2 = 760, lw2 = 196, x0 = lw2 + 10, x1 = w2 - 30, rh = 44, top2 = 22, h2 = top2 + KEYS.length * rh + 4;
     var s2 = svg("svg", { viewBox: "0 0 " + w2 + " " + h2, class: "chart", role: "img", "aria-label": "Position of the selected jurisdictions on each dimension" });
@@ -2414,7 +2418,7 @@ window.CI_BOOT = function () {
     var disc = (D.paper.discrepancies || []).filter(function (d) { return d.code === code; })[0];
     if (disc) {
       var cw = el("div", "callout warn");
-      cw.appendChild(aiP(["This jurisdiction differs from the published working paper (" + disc.detail.join("; ") + "). " + disc.why + " ",
+      cw.appendChild(okP(["This jurisdiction's scores differ from those in the working paper of July 2026 (" + disc.detail.join("; ") + "). " + disc.why + " ",
                           link("#/data/docs", "All differences →")]));
       ov.appendChild(cw);
     }
@@ -2476,18 +2480,19 @@ window.CI_BOOT = function () {
     targets.lawmarket = lm;
     lm.appendChild(el("h2", null, "Law and Market"));
     if (code === "EU") {
-      lm.appendChild(aiP("For the three gatekeeper–market pairs, the De Jure score is measured again at market level, for the obligations " +
-        "that bind that market, and the De Facto score records what was observed. Hollow marks are " + DF_BASE + "; filled marks are the latest observation."));
+      lm.appendChild(okP("For the three gatekeeper–market pairs, the De Jure record is restated at market level: it keeps the mechanisms relevant to that market " +
+        "and scores how far the EU's obligations cover it. The De Facto score records what was observed in the market. Hollow marks are " + DF_BASE +
+        "; filled marks are the latest observation."));
       lm.appendChild(add(el("p", "small"), link("#/explore/defacto", "Open the De Facto view →"), " · ", link("#/explore/compare?type=gap", "Law against market, mechanism by mechanism →")));
       UNITS.forEach(function (u) {
         lm.appendChild(el("h4", null, unitById[u].name + " · " + unitById[u].gatekeeper + " · " + unitById[u].market));
         lm.appendChild(lawMarketRows([u], KEYS));
       });
     } else if (code === "DE") {
-      lm.appendChild(aiP(["Germany is covered by the EU's De Facto observations, which are made for three gatekeeper–market pairs across the European Union: see the ",
+      lm.appendChild(okP(["Germany is covered by the EU's De Facto observations, which are made for three gatekeeper–market pairs across the European Union: see the ",
         link("#/jurisdiction/EU", "European Union profile"), "."]));
     } else {
-      lm.appendChild(aiP("De Facto contestability has not been measured for " + theName(code) + ". The De Facto layer covers three gatekeeper–market pairs in the European Union, so this profile shows the law only."));
+      lm.appendChild(okP("De Facto contestability has not been measured for " + theName(code) + ". The De Facto layer covers three gatekeeper–market pairs in the European Union, so this profile shows the law only."));
     }
     main.appendChild(lm);
 
@@ -2546,9 +2551,9 @@ window.CI_BOOT = function () {
     var b = d.body;
     var f = el("table", "plain entry-fields");
     f.appendChild(add(el("tr"), el("th", null, "Mechanism (conceptual definition)"), el("td", null, m.description || "—")));
-    f.appendChild(add(el("tr"), el("th", null, "De Jure operationalisation"),
+    f.appendChild(add(el("tr"), el("th", null, "De Jure operationalization"),
       add(el("td"), "Obligation category " + m.id + ": ", el("strong", null, m.name), ". One score per jurisdiction.")));
-    f.appendChild(add(el("tr"), el("th", null, "De Facto operationalisation"),
+    f.appendChild(add(el("tr"), el("th", null, "De Facto operationalization"),
       add(el("td"), "Indicator " + m.code + ": ", el("strong", null, m.indicator), ". One score per gatekeeper–market pair and observation date. ",
           link("#/methodology/ind-" + m.code, "How it was scored for each pair →"))));
     f.appendChild(add(el("tr"), el("th", null, "Scoring rules"),
@@ -2702,25 +2707,10 @@ window.CI_BOOT = function () {
     c2.appendChild(tabCap("Table 1.", "The " + words(nD) + " dimensions and their " + words(nM) + " mechanisms"));
     // approved by Chris on 2026-11-24 ("这里同样")
     c2.appendChild(okP("Each mechanism has one De Jure obligation category and one De Facto indicator, so the two layers can be read side by side. " +
-      "Open a dimension for its categories, and a category for its definition, both operationalisations and its data."));
+      "Open a dimension for its categories, and a category for its definition, both operationalizations and its data."));
     D.dimensions.forEach(function (d, i) { c2.appendChild(dimensionEntry(d, i)); });
     h(c2, "Units of observation");
     add(c2, ap("units"), ap("unit_dejure"), ap("unit_dejure_market"), ap("unit_defacto"));
-    var chain = ART.chain || [], djm = D.periods["de_jure|market|current"] || {}, djb = D.periods["de_jure|market|baseline"] || {};
-    // how many pairs have a market-level De Jure record at each date (Google Play has none for the baseline)
-    var djNowN = UNITS.filter(function (u) { return mIdx("de_jure", u, "current"); }).length;
-    var djBaseN = UNITS.filter(function (u) { return mIdx("de_jure", u, "baseline"); }).length;
-    if (chain.length === 3) {
-      c2.appendChild(tabCap("Figure 1.", "The three levels of measurement and what each covers at present"));
-      var cf = el("div", "flow three");
-      [[chain[0][2], nJ + " jurisdictions × " + nM + " obligation categories, " + DJ_DATE, "#/explore/dejure", "Explore De Jure"],
-       [chain[1][2], djNowN + " gatekeeper–market pairs in " + month(djm.observed) + (djBaseN === djNowN ? " and " : "; " + djBaseN + " of them also in ") + month(djb.observed),
-        "#/explore/compare?type=gap", "Law beside market"],
-       [chain[2][2], nU + " pairs × " + nM + " indicators, " + DF_BASE + " and " + DF_NOW, "#/explore/defacto", "Explore De Facto"]].forEach(function (x) {
-        cf.appendChild(add(el("div", "st"), el("b", null, x[0]), x[1], el("br"), more(x[2], x[3])));
-      });
-      c2.appendChild(cf);
-    }
     add(c2, ap("alignment"));
 
     /* ---- 3. De Jure Scoring */
@@ -2796,7 +2786,7 @@ window.CI_BOOT = function () {
       ap("agg_overall_lead"),
       formula(el("i", null, "C"), " = ¼ ( ", sub("D", "1"), " + ", sub("D", "2"), " + ", sub("D", "3"), " + ", sub("D", "4"), " )"),
       ap("agg_equal"));
-    c3.appendChild(tabCap("Figure 2.", "From the legal text to the De Jure index"));
+    c3.appendChild(tabCap("Figure 1.", "From the legal text to the De Jure index"));
     var flow = el("div", "flow");
     [["Legal text", "Statutes, regulations, orders and court remedies in force in " + DJ_DATE + "."],
      ["Three factors", "Existence, Scope and Enforceability, each scored 0, ½ or 1."],
@@ -2831,7 +2821,7 @@ window.CI_BOOT = function () {
     add(c4, ap("df_objective"));
     h(c4, "The observation: a gatekeeper–market pair at two dates");
     add(c4, ap("df_pair"), ap("df_consequences"));
-    c4.appendChild(aiP("Each pair is scored at two dates: " + DF_BASE + ", before the obligations of the Digital Markets Act applied in March 2024, and " + DF_NOW + "."));
+    c4.appendChild(okP("Each pair is scored at two dates: " + DF_BASE + ", before the obligations of the Digital Markets Act applied in March 2024, and " + DF_NOW + "."));
     add(c4, ap("df_dates", more("#/explore/defacto?period=change", "The change between the two dates")));
     h(c4, "Observable indicators");
     add(c4, ap("df_indicators"), ap("df_selection_lead"), alist("df_selection"), ap("df_once"));
@@ -2852,7 +2842,7 @@ window.CI_BOOT = function () {
     var nSc = D.deFacto.items.filter(function (x) { return x.status === "scored"; }).length;
     var nMi = D.deFacto.items.filter(function (x) { return x.status === "missing"; }).length;
     var nNa = D.deFacto.items.filter(function (x) { return x.status === "not_applicable"; }).length;
-    c4.appendChild(aiP(["In this dataset, of the " + D.deFacto.items.length + " indicator records (" + words(nU) + " pairs × " + words(nM) + " indicators), " + nSc +
+    c4.appendChild(okP(["In this dataset, of the " + D.deFacto.items.length + " indicator records (" + words(nU) + " pairs × " + words(nM) + " indicators), " + nSc +
       " are scored, " + nMi + " are Missing and " + nNa + " are Not Applicable. ", more("#/explore/defacto", "Each record, by pair")]));
     h(c4, "Evidence and confidence");
     add(c4, ap("df_evidence"), ap("df_penalty"), ap("df_confidence"));
@@ -2887,7 +2877,7 @@ window.CI_BOOT = function () {
     c4.appendChild(fold("What varies from market to market", "applicability, observation, competitive weight", [
       ap("var_applicability"), ap("var_observation"), ap("var_weight")]));
     h(c4, "Indicator by indicator");
-    c4.appendChild(aiP("Expand an indicator for what it observes and how it was scored for each gatekeeper–market pair. The rationale is the coded record; open it for the full text and its sources."));
+    c4.appendChild(okP("Expand an indicator for what it observes and how it was scored for each gatekeeper–market pair. The rationale is the coded record; open it for the full text and its sources."));
     c4.appendChild(add(el("p", "chart-foot top"), dlButton("contestability_definitions.csv", ["category_id", "category_code", "dimension", "dimension_name", "category", "mechanism_description", "de_facto_indicator"],
       function () { return D.mechanisms.map(function (m) { return [m.id, m.code, m.dimension, dimById[m.dimension].name, m.name, m.description, m.indicator]; }); }, "Download the definitions (CSV)")));
     D.dimensions.forEach(function (d) {
@@ -2930,16 +2920,17 @@ window.CI_BOOT = function () {
     h(c5, "Coverage");
     add(c5, ap("lim_coverage", more("#/explore/defacto", "The gatekeeper–market pairs")), ap("lim_markets"),
       ap("lim_evidence", more("#/explore/defacto?units=google_play&period=current", "Google Play, indicator by indicator")));
-    c5.appendChild(aiP([cap(words(nJ)) + " jurisdictions are assessed on the law. Areas shown in grey on the map have not been assessed, which is different from a score of zero. " +
+    c5.appendChild(okP([cap(words(nJ)) + " jurisdictions are assessed on the law. Areas shown in gray on the map have not been assessed, which is different from a score of zero. " +
       "The 27 EU member states share the EU score; Germany also has its own national regime and its own score. ", more("#/explore/dejure?view=map", "The map")]));
     h(c5, "Comparability");
     add(c5, ap("lim_cross", more("#/explore/compare?type=mkt", "Compare markets")));
     h(c5, "Aggregation assumptions");
     add(c5, ap("lim_weights", more("#/explore/dejure?view=rank", "Scores by dimension")));
-    c5.appendChild(aiP([ins.precision.text + " ", more("#/explore/dejure?view=rank&dim=overall", "The ranking")]));
+    c5.appendChild(okP([ins.precision.text + " ", more("#/explore/dejure?view=rank&dim=overall", "The ranking")]));
     h(c5, "Interpretation");
     add(c5, ap("lim_dejure"));
-    c5.appendChild(aiP(["The jurisdiction-level index and the market-level De Jure score of a pair are therefore different numbers and should not be compared with each other. ",
+    c5.appendChild(okP(["The jurisdiction-level index and the market-level De Jure score of a pair are therefore different measures: the first describes a jurisdiction's " +
+      "regulatory environment as a whole, the second the legal protections that apply within one market. ",
       more("#/explore/compare?type=gap", "Market-level De Jure beside De Facto")]));
     add(c5, ap("lim_descriptive", more("#/explore/defacto?period=change", "The change between the two dates")));
     if (ART.lim_search && num(mVal("de_facto", "google_search", "current", "overall")) === "0.52") {
@@ -2950,7 +2941,7 @@ window.CI_BOOT = function () {
       c5.appendChild(se);
     }
     if (disc.length || dfc.length) {
-      c5.appendChild(aiP(["The working paper (July 2026) was compiled from an earlier state of the database. " + disc.length + " of " + nJ + " jurisdictions and " + dfc.length + " of " +
+      c5.appendChild(okP(["The working paper (July 2026) was compiled from an earlier state of the database. " + disc.length + " of " + nJ + " jurisdictions and " + dfc.length + " of " +
         (D.paper.deFactoCompare || []).length + " pairs differ from its tables; each difference is listed with its reason. ", more("#/data/docs", "The differences")]));
     }
     h(c5, "Coding judgment and validation");
@@ -3000,7 +2991,7 @@ window.CI_BOOT = function () {
 
   /* ========================================================== TAB 4: APPLICATIONS */
   // The three analyses of the professor's plan. Titles and one-line descriptions are the plan's own wording; the
-  // analyses themselves are drafts ([AI generated]) built from the data, for the team to replace.
+  // paragraphs of the analyses are built from the data; Chris had them reviewed on 2026-11-24 and they carry no marker.
   var APPS = [
     { id: "frameworks", title: "Comparing Digital Competition Frameworks",
       blurb: "Examining differences in contestability obligations across jurisdictions and regulatory approaches.",
@@ -3017,8 +3008,7 @@ window.CI_BOOT = function () {
     document.title = "Applications · The Contestability Index";
     var s = section(), w = el("div", "wrap");
     head(w, "Applications", "Applications of the Contestability Index", "Research analyses and illustrative applications using the index data.");
-    w.appendChild(tbdP("Authors and final texts. The three entries below hold the place: their charts are computed from the data, and their paragraphs are [AI generated] drafts. " +
-      "Market case studies, analytical notes and research results can be added as further entries."));
+    w.appendChild(tbdP("Authors of the three analyses below. Market case studies, analytical notes and research results can be added as further entries."));
     var list = el("div", "app-list");
     APPS.forEach(function (a, i) {
       var c = el("div", "app-card");
@@ -3043,7 +3033,7 @@ window.CI_BOOT = function () {
     w.appendChild(el("p", "sec-kicker", "Application " + ("0" + (i + 1)).slice(-2)));
     w.appendChild(el("h1", "pname", a.title));
     w.appendChild(el("p", "sec-intro", a.blurb));
-    w.appendChild(tbdP("Author, date and the final text of this analysis. The paragraphs marked [AI generated] below are placeholders drafted from the data."));
+    w.appendChild(tbdP("Author and date of this analysis."));
     function block(title) {
       var c = el("div", "card");
       c.appendChild(el("h2", null, title));
@@ -3057,11 +3047,11 @@ window.CI_BOOT = function () {
       parts.big.forEach(function (x) { big.appendChild(add(el("div"), el("b", null, x[0]), el("span", null, x[1]))); });
       b1.appendChild(big);
     }
-    parts.takeaway.forEach(function (t) { b1.appendChild(aiP(t)); });
+    parts.takeaway.forEach(function (t) { b1.appendChild(okP(t)); });
     var b2 = block("Featured visualization");
     parts.featured(b2);
     var b3 = block("Interpretation");
-    parts.interpretation.forEach(function (t) { b3.appendChild(aiP(t)); });
+    parts.interpretation.forEach(function (t) { b3.appendChild(okP(t)); });
     var b4 = block("Additional analysis");
     parts.additional(b4);
     var b5 = block("Explore the underlying data");
@@ -3114,10 +3104,10 @@ window.CI_BOOT = function () {
           var msca = fullJP.filter(function (m) { return /MSCA/.test(cellOf(m.id, "JP").instrument_basis || ""); });
           var zeros = D.mechanisms.filter(function (m) { return cellOf(m.id, "JP").score === 0; });
           c.appendChild(el("h3", "pane-title", "Case: Japan, a law written for smartphones"));
-          c.appendChild(aiP("Japan scores " + num(jv) + ", the highest outside the European Union and Germany. " +
+          c.appendChild(okP("Japan scores " + num(jv) + ", the highest outside the European Union and Germany. " +
             (msca.length === fullJP.length ? "All " + words(fullJP.length) : cap(words(msca.length)) + " of the " + words(fullJP.length)) +
             " categories it requires in full rest on the Mobile Software Competition Act (Act 58/2024), which the coding records as in full force since 18 December 2025."));
-          c.appendChild(aiP("Japan scores 0.5 in " + words(jn.part) + " categories and 0 in " + words(jn.none) + (zeros.length ? ": " + listText(zeros.map(function (m) { return m.name.toLowerCase(); })) : "") +
+          c.appendChild(okP("Japan scores 0.5 in " + words(jn.part) + " categories and 0 in " + words(jn.none) + (zeros.length ? ": " + listText(zeros.map(function (m) { return m.name.toLowerCase(); })) : "") +
             ". The table shows which factor holds each partial score down; click a score for its legal justification."));
           var t = el("table", "plain"), hr = el("tr");
           ["Category", "Score", "Existence", "Scope", "Enforceability", "Basis"].forEach(function (x) { hr.appendChild(el("th", null, x)); });
@@ -3170,12 +3160,12 @@ window.CI_BOOT = function () {
         // a row opens the De Facto view on the change between the two dates, at that dimension, with the three pairs
         c.appendChild(pairDimChart(UNITS, "change", function (k) { S.dim = k; S.period = "change"; S.units = UNITS.slice(); S.cat = null; go(exploreHref("defacto")); }, true));
         c.appendChild(el("h3", "pane-title", "Case: " + u1.name + ", the largest increase"));
-        c.appendChild(aiP("The Digital Markets Act designation of " + u1.gatekeeper + " for " + u1.service.replace(/ \(.*\)$/, "") + " dates from " +
+        c.appendChild(okP("The Digital Markets Act designation of " + u1.gatekeeper + " for " + u1.service.replace(/ \(.*\)$/, "") + " dates from " +
           day(u1.designationDate) + ". In " + DF_BASE + ", before the Act's obligations applied, the pair scored " + num(c1.a) + " on the De Facto index; in " + DF_NOW +
           " it scored " + num(c1.b) + ", the largest increase of the " + words(nU) + " pairs."));
         if (changed.length) {
           var bigI = changed[0], bm = mechById[bigI.mechanism];
-          c.appendChild(aiP((dimUp.length === nD ? "The increase is spread across all " + words(nD) + " dimensions. " : "The increase comes from " + listText(dimUp) + ". ") +
+          c.appendChild(okP((dimUp.length === nD ? "The increase is spread across all " + words(nD) + " dimensions. " : "The increase comes from " + listText(dimUp) + ". ") +
             "The largest change at indicator level is " + bm.code + " " + bm.indicator.toLowerCase() + ", from " + num(bigI.pre) + " to " + num(bigI.post) + "; " +
             words(changed.length) + " indicators rose in all. " + cap(words(missing)) + " of the " + words(post.nItems) + " indicators had too little evidence to score."));
         }
@@ -3210,7 +3200,7 @@ window.CI_BOOT = function () {
       big: ins.gap.big,
       takeaway: [ins.gap.text],
       featured: function (c) {
-        c.appendChild(chartHead("Law against market in the three pairs, " + DF_NOW, "Dark bar: De Jure at market level. Coloured bar: De Facto. Tick: De Facto in " + DF_BASE + ".",
+        c.appendChild(chartHead("Law against market in the three pairs, " + DF_NOW, "Dark bar: De Jure at market level. Colored bar: De Facto. Tick: De Facto in " + DF_BASE + ".",
           [helpLink("#/methodology/limits", "How to read the gap"), dlButton("contestability_law_vs_market.csv", CSV.gapHeader, CSV.gapRows)]));
         c.appendChild(pairedBars(UNITS.map(function (u) { return { u: u, k: "overall", label: unitById[u].name, click: function () { go("#/explore/compare?type=gap&unit=" + u); } }; })));
       },
@@ -3219,12 +3209,16 @@ window.CI_BOOT = function () {
         "A gap can also reflect indicators that could not be scored. Missing indicators are left out of the De Facto index, so the gap is computed on the indicators that were scored."],
       additional: function (c) {
         c.appendChild(el("h3", "pane-title", "Case: one law, three markets"));
-        c.appendChild(aiP((same ? "In " + DJ_DATE + " the same EU obligations apply to all " + words(nU) + " pairs: each has a market-level De Jure score of " + num(djs[0]) + ". " : "") +
-          "Their De Facto scores in " + DF_NOW + " are " + listText(UNITS.map(function (u, k) { return num(dfs[k]) + " for " + unitById[u].name; })) +
-          ". The dimensions differ more than the totals: " + leaders.map(function (l) {
+        // dimensions on which the pairs differ, and dimensions on which all of them have the same score
+        var differ = leaders.filter(function (l) { return l.who.length < nU; }), tied = leaders.filter(function (l) { return l.who.length === nU; });
+        c.appendChild(okP((same ? "In " + DJ_DATE + " the same EU obligations apply to all " + words(nU) + " pairs: each has a market-level De Jure score of " + num(djs[0]) + ". " : "") +
+          "Their De Facto scores in " + DF_NOW + " are " + listText(UNITS.map(function (u, k) { return num(dfs[k]) + " for " + unitById[u].name; })) + ". " +
+          (differ.length ? "The dimension scores show where the pairs differ: " + listText(differ.map(function (l) {
             return l.d + " is highest for " + listText(l.who.map(function (u) { return unitById[u].name; })) + " (" + num(l.v) + ")";
-          }).join("; ") + "."));
-        c.appendChild(aiP("Google Play is scored on the app-distribution record of the market-level De Jure layer, because the same obligations bind both app stores; it has no " + DF_BASE + " De Jure record."));
+          })) + (tied.length ? "; all " : "") : (tied.length ? "All " : "")) +
+          (tied.length ? words(nU) + " pairs score the same on " + listText(tied.map(function (l) { return l.d + " (" + num(l.v) + ")"; })) : "") + "."));
+        c.appendChild(okP("Google Play takes its market-level De Jure score from the app-distribution record, because the same obligations bind both app stores; " +
+          "it has no De Jure record for " + DF_BASE + "."));
         c.appendChild(chartHead("De Facto by dimension for the three pairs, " + DF_NOW, null,
           [dlButton("contestability_defacto_index.csv", CSV.indexHeader, function () { return CSV.indexRows().filter(function (r) { return r[0] === "de_facto"; }); })]));
         c.appendChild(seriesKey(UNITS.map(function (u) { return { label: unitById[u].name, color: UNIT_COLOR[u], shape: "sq" }; })));
@@ -3454,7 +3448,7 @@ window.CI_BOOT = function () {
     });
     host.appendChild(add(el("div", "table-scroll"), t));
     host.appendChild(el("h3", "pane-title", "Coding identifiers"));
-    host.appendChild(aiP("Every score has a record identifier made of its keys: the layer (dj for De Jure at jurisdiction level, djm for De Jure at market level, df for De Facto), " +
+    host.appendChild(okP("Every score has a record identifier made of its keys: the layer (dj for De Jure at jurisdiction level, djm for De Jure at market level, df for De Facto), " +
       "the jurisdiction code or the pair identifier, the category code and the observation month. Example: " + recordId("dj", "EU", mechById[7], "current") +
       ". The identifier stays the same when the database is rebuilt; the db_row number does not."));
     host.appendChild(el("h3", "pane-title", "Missing-value conventions"));
@@ -3463,7 +3457,7 @@ window.CI_BOOT = function () {
       cs.appendChild(add(el("tr"), el("th", null, x[0]), el("td", null, x[1] ? cap(x[1]) + "." : "")));
     });
     host.appendChild(cs);
-    host.appendChild(aiP("In the downloads a missing or not applicable indicator has an empty score cell. An empty cell is never a zero, and such indicators are left out of the dimension score and the index."));
+    host.appendChild(okP("In the downloads a missing or not applicable indicator has an empty score cell. An empty cell is never a zero, and such indicators are left out of the dimension score and the index."));
     host.appendChild(el("h3", "pane-title", "Version"));
     host.appendChild(versionBox());
   }
@@ -3668,7 +3662,7 @@ window.CI_BOOT = function () {
     var c = citeText();
     host.appendChild(el("h3", "pane-title", "Citation"));
     host.appendChild(add(el("p"), c.paper, " ", docLink("paper", "PDF")));
-    host.appendChild(tbdP("How to cite the dataset itself, and the licence it is released under."));
+    host.appendChild(tbdP("How to cite the dataset itself, and the license it is released under."));
 
     host.appendChild(el("h3", "pane-title", "Version"));
     host.appendChild(versionBox());
@@ -3710,7 +3704,7 @@ window.CI_BOOT = function () {
       " · ", extLink(REPO, "Repository on GitHub")));
   }
   function dataPaper(host) {
-    host.appendChild(aiP("The working paper (July 2026) was compiled from an earlier state of the database. The paper's Table 3 covers fifteen obligation categories; " +
+    host.appendChild(okP("The working paper (July 2026) was compiled from an earlier state of the database. The paper's Table 3 covers fifteen obligation categories; " +
       "the database covers " + words(nM) + " and includes corrections made afterwards. The lists below are computed by comparing the two when the page opens.", "prose"));
     var disc = D.paper.discrepancies || [];
     var t = el("table", "plain");
@@ -3739,7 +3733,7 @@ window.CI_BOOT = function () {
     var nExtracts = Object.keys(D.cells).reduce(function (n, k) { return n + (D.cells[k].extracts || []).length; }, 0);
     var nInst = Object.keys(D.instruments).reduce(function (n, k) { return n + D.instruments[k].length; }, 0);
     head(w, "Data & Sources · legal record", "The law behind every score",
-      aiP("The instruments behind each De Jure score, with links to the official text. The database holds " + nInst + " instruments, the full text of " +
+      okP("The instruments behind each De Jure score, with links to the official text. The database holds " + nInst + " instruments, the full text of " +
           D.documents.length + " documents and " + nExtracts + " verbatim provisions, each attached to the category and jurisdiction it supports.", "sec-intro"));
     var chips = el("div", "chips");
     CODES.forEach(function (c) {
@@ -3816,23 +3810,23 @@ window.CI_BOOT = function () {
     document.title = "About · The Contestability Index";
     var s = section(), w = el("div", "wrap prose");
     head(w, "About", "About the index");
-    w.appendChild(aiP("The Contestability Index measures the opportunity for incumbent positions in digital markets to be challenged, rather than market structure " +
+    w.appendChild(okP("The Contestability Index measures the opportunity for incumbent positions in digital markets to be challenged, rather than market structure " +
       "or outcomes. It is developed in the working paper Beyond Market Concentration: Measuring Contestability in Digital Markets by Zhiyang Cheng, Tracy Xu " +
       "and Amr Yakout (July 2026)."));
-    w.appendChild(aiP("The project is affiliated with the Knight-Georgetown Institute (KGI) at Georgetown University."));
-    w.appendChild(aiP("The De Jure layer covers " + words(nJ) + " jurisdictions: " + theNames(CODES) +
+    w.appendChild(okP("The project is affiliated with the Knight-Georgetown Institute (KGI) at Georgetown University."));
+    w.appendChild(okP("The De Jure layer covers " + words(nJ) + " jurisdictions: " + theNames(CODES) +
       ". The De Facto layer covers " + words(nU) + " gatekeeper–market pairs. Both use the same " + words(nM) + " mechanisms in " + words(nD) + " dimensions."));
     w.appendChild(el("h3", null, "Research team and contact"));
     w.appendChild(el("p", null, "Tracy Xu, Amr Yakout and Zhiyang Cheng."));
-    w.appendChild(tbdP("Contact address, and the licence for the data and the site."));
+    w.appendChild(tbdP("Contact address, and the license for the data and the site."));
     w.appendChild(el("h3", null, "How to cite"));
     w.appendChild(add(el("p"), citeText().paper, " ", docLink("paper", "PDF")));
     w.appendChild(tbdP("How to cite the dataset itself."));
     w.appendChild(el("h3", null, "The figures and the working paper"));
-    w.appendChild(aiP(["The figures on this site come from the project database built " + D.meta.built + ". Where they differ from the working paper, ",
+    w.appendChild(okP(["The figures on this site come from the project database built " + D.meta.built + ". Where they differ from the working paper, ",
       link("#/data/docs", "Data & Sources"), " lists each difference and its reason."]));
     w.appendChild(el("h3", null, "How the site works"));
-    w.appendChild(aiP("The site is a set of static files. When a page opens, your browser downloads a copy of the project database without the legal " +
+    w.appendChild(okP("The site is a set of static files. When a page opens, your browser downloads a copy of the project database without the legal " +
       "full texts (SQLite, " + (D.meta.dbBytes / 1e6).toFixed(1) + " MB) and computes every figure from it with sql.js. A full text is fetched only when you open one. " +
       "The download is the whole database" + (D.meta.fullDbBytes ? " (" + (D.meta.fullDbBytes / 1e6).toFixed(1) + " MB)" : "") + "; its scores are the same rows."));
     w.appendChild(add(el("p"), extLink(APPENDIX, "Online appendix"), " · ", link(D.meta.dbUrl, "Download the database"), " · ", extLink(REPO, "Repository")));

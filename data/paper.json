@@ -713,24 +713,12 @@
           "De Facto Contestability begins at the market level because realized competitive conditions are inherently market-specific. Search, app distribution, operating systems, messaging, and marketplaces differ in their technological architecture, network effects, distribution channels, user behavior, infrastructure requirements, and sources of incumbent advantage. A jurisdiction-wide De Facto score constructed before measuring individual markets would combine heterogeneous competitive conditions and require an additional rule for weighting markets of different economic importance and evidentiary coverage."
         ]
       ],
-      "chain": [
-        [
-          "paper",
-          "3.2.3",
-          "Jurisdiction-level legal environment"
-        ],
-        [
-          "paper",
-          "3.2.3",
-          "Market-level formal protections"
-        ],
-        [
-          "paper",
-          "3.2.3",
-          "Market-level realized conditions"
-        ]
-      ],
       "alignment": [
+        [
+          "site",
+          "Working paper, Section 3.2.3: the displayed line \"jurisdiction-level legal environment → market-level formal protections → market-level realized conditions\", written as a sentence",
+          "The framework therefore proceeds from the jurisdiction-level legal environment to market-level formal protections, and from there to market-level realized conditions."
+        ],
         [
           "paper",
           "3.2.3",
@@ -1159,7 +1147,8 @@
       "abstract": "2026-11-24",
       "concept_origin": "2026-11-24",
       "def_dejure": "2026-11-24",
-      "def_defacto": "2026-11-24"
+      "def_defacto": "2026-11-24",
+      "alignment": "2026-11-24"
     }
   },
   "documents": [

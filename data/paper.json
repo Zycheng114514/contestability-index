@@ -1154,11 +1154,10 @@
         ]
       ]
     },
-    "awaitingReview": [
-      "abstract",
-      "concept_origin"
-    ],
+    "awaitingReview": [],
     "reviewed": {
+      "abstract": "2026-11-24",
+      "concept_origin": "2026-11-24",
       "def_dejure": "2026-11-24",
       "def_defacto": "2026-11-24"
     }

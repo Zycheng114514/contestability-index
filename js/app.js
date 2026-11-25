@@ -88,6 +88,12 @@ window.CI_BOOT = function () {
     (Array.isArray(parts) ? parts : [parts]).forEach(function (x) { add(p, x); });
     return p;
   }
+  // A paragraph written for the site that Chris has reviewed and approved: it carries no marker (his rule of 2026-11-24).
+  function okP(parts, cls) {
+    var p = el("p", cls);
+    (Array.isArray(parts) ? parts : [parts]).forEach(function (x) { add(p, x); });
+    return p;
+  }
   // A line the team still has to settle (licence, contact): marked like the drafts, so it is not read as decided.
   function tbdP(parts, cls) {
     var p = el("p", cls);
@@ -2611,6 +2617,14 @@ window.CI_BOOT = function () {
     return l;
   }
   function more(href, text) { var a = link(href, text + " →"); a.className = "art-more"; return a; }
+  // an example from the data, written into the paragraph `p`, followed by a link that opens the record the example is about
+  function example(p, sentence, open) {
+    if (!p || !sentence) return p;
+    var b = el("button", "linkish opens-panel art-more", "Open this record →");
+    b.type = "button";
+    b.addEventListener("click", open);
+    return add(p, " " + sentence + " ", b);
+  }
   function tabCap(no, text) { return add(el("p", "art-cap"), el("b", null, no), " " + text); }
   function formula() {
     var d = el("p", "formula");
@@ -2660,18 +2674,18 @@ window.CI_BOOT = function () {
     var exJ = cellOf(6, "EU"), m6 = mechById[6];
     var exU = UNITS.indexOf("apple_ios_appstore") >= 0 ? "apple_ios_appstore" : UNITS[0];
     var exIt = D.deFacto.items.filter(function (x) { return x.unit === exU && x.mechanism === 6; })[0];
-    c1.appendChild(fold("De Jure Contestability", "definition and an example from the data", [
-      ap("def_dejure"),
-      exJ ? aiP("Example: in " + DJ_DATE + " the European Union scores " + glyph(exJ.score) + " on " + m6.name.toLowerCase() + " (category " + m6.id + "), on the basis of " + (exJ.instrument_basis || "its legal record") + ".") : null,
-      exJ ? recordButton("Open this record", function () { matrixOrder = CODES; openCell(6, "EU"); }) : null]));
-    c1.appendChild(fold("De Facto Contestability", "definition and an example from the data", [
-      ap("def_defacto"),
-      exIt && exIt.status === "scored" ? aiP("Example: for " + unitById[exU].name + " in " + theName(unitById[exU].jurisdiction) + ", indicator " + m6.code + " (" + m6.indicator.toLowerCase() + ") is scored " +
-        glyph(exIt.pre) + " in " + DF_BASE + " and " + glyph(exIt.post) + " in " + DF_NOW + ".") : null,
-      exIt ? recordButton("Open this record", function () { openIndicator(exU, 6); }) : null]));
+    // each layer in a paragraph of its own: what it measures, an example from the data, and a link that opens the example's record
+    add(c1,
+      example(ap("def_dejure"), exJ ? "For example, in " + DJ_DATE + " the European Union scores " + glyph(exJ.score) + " on " + m6.name.toLowerCase() +
+        " (category " + m6.id + "), on the basis of " + (exJ.instrument_basis || "its legal record") + "." : null,
+        function () { matrixOrder = CODES; openCell(6, "EU"); }),
+      example(ap("def_defacto"), exIt && exIt.status === "scored" ? "For example, for " + unitById[exU].name + " in " + theName(unitById[exU].jurisdiction) +
+        ", indicator " + m6.code + " (" + m6.indicator.toLowerCase() + ") is scored " + glyph(exIt.pre) + " in " + DF_BASE + " and " + glyph(exIt.post) + " in " + DF_NOW + "." : null,
+        function () { openIndicator(exU, 6); }));
     h(c1, "Scope");
     add(c1, ap("market"));
-    c1.appendChild(aiP(["At present the index covers " + words(nJ) + " jurisdictions on the law in force in " + DJ_DATE + " (",
+    // approved by Chris on 2026-11-24 ("我觉得你这里写的够好")
+    c1.appendChild(okP(["At present the index covers " + words(nJ) + " jurisdictions on the law in force in " + DJ_DATE + " (",
       link("#/explore/dejure", "De Jure"), ") and " + words(nU) + " gatekeeper–market pairs on market conditions in " + DF_BASE + " and " + DF_NOW + " (",
       link("#/explore/defacto", "De Facto"), "): " + listText(UNITS.map(function (u) { return unitById[u].name; })) + "."]));
 
@@ -2686,7 +2700,8 @@ window.CI_BOOT = function () {
     h(c2, "Dimensions, mechanisms, obligation categories and indicators");
     add(c2, ap("levels"), ap("two_perspectives"), ap("purposes"), ap("classification"));
     c2.appendChild(tabCap("Table 1.", "The " + words(nD) + " dimensions and their " + words(nM) + " mechanisms"));
-    c2.appendChild(aiP("Each mechanism has one De Jure obligation category and one De Facto indicator, so the two layers can be read side by side. " +
+    // approved by Chris on 2026-11-24 ("这里同样")
+    c2.appendChild(okP("Each mechanism has one De Jure obligation category and one De Facto indicator, so the two layers can be read side by side. " +
       "Open a dimension for its categories, and a category for its definition, both operationalisations and its data."));
     D.dimensions.forEach(function (d, i) { c2.appendChild(dimensionEntry(d, i)); });
     h(c2, "Units of observation");

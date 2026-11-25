@@ -567,16 +567,26 @@
       ],
       "def_dejure": [
         [
+          "site",
+          "Methodology Manual, Table II.1: the cell \"The formal legal and regulatory environment governing competition in a market.\" under the heading \"What It Measures\", written as a sentence",
+          "De Jure Contestability measures the formal legal and regulatory environment governing competition in a market."
+        ],
+        [
           "manual",
           "II.A",
-          "The formal legal and regulatory environment governing competition in a market. It captures the extent to which laws, regulations, and platform obligations create opportunities for rival firms to enter and expand."
+          "It captures the extent to which laws, regulations, and platform obligations create opportunities for rival firms to enter and expand."
         ]
       ],
       "def_defacto": [
         [
+          "site",
+          "Methodology Manual, Table II.1: the cell \"Actual competitive conditions observed in the marketplace.\" under the heading \"What It Measures\", written as a sentence",
+          "De Facto Contestability measures the actual competitive conditions observed in the marketplace."
+        ],
+        [
           "manual",
           "II.A",
-          "Actual competitive conditions observed in the marketplace. It captures whether rivals can realistically enter, grow, and compete given prevailing technological, economic, and behavioral conditions."
+          "It captures whether rivals can realistically enter, grow, and compete given prevailing technological, economic, and behavioral conditions."
         ]
       ],
       "market": [
@@ -1148,7 +1158,10 @@
       "abstract",
       "concept_origin"
     ],
-    "reviewed": {}
+    "reviewed": {
+      "def_dejure": "2026-11-24",
+      "def_defacto": "2026-11-24"
+    }
   },
   "documents": [
     {

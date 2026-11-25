@@ -1060,8 +1060,8 @@ window.CI_BOOT = function () {
   /* ========================================================== shared state, kept in the address */
   // One state for Explore Data. It is written into the address with replaceState (no reload), read back when a
   // page opens, and kept in memory when the reader moves between De Jure, De Facto and Compare.
-  var VIEWS = ["map", "rank"], PERIODS = ["baseline", "current", "change"], CMPS = ["jur", "mkt", "gap"];
-  var S = { dim: "overall", view: "map", period: "current", jurs: ["EU", "JP", "CN", "US"], units: UNITS.slice(),
+  var PERIODS = ["baseline", "current", "change"], CMPS = ["jur", "mkt", "gap"];
+  var S = { dim: "overall", period: "current", jurs: ["EU", "JP", "CN", "US"], units: UNITS.slice(),
             cmp: "jur", unit: "all", cat: null };
   function readQuery(q) {
     var p = {};
@@ -1071,7 +1071,6 @@ window.CI_BOOT = function () {
       p[k] = v;
     });
     if (KEYS.indexOf(p.dim) >= 0) S.dim = p.dim;
-    if (VIEWS.indexOf(p.view) >= 0) S.view = p.view;
     if (PERIODS.indexOf(p.period) >= 0) S.period = p.period;
     if (CMPS.indexOf(p.type) >= 0) S.cmp = p.type;
     if (p.j !== undefined) S.jurs = p.j.split(",").map(function (c) { return c.toUpperCase(); })
@@ -1085,7 +1084,7 @@ window.CI_BOOT = function () {
     return p;
   }
   function query(keys) {
-    var map = { dim: S.dim, view: S.view, period: S.period, type: S.cmp, j: S.jurs.join(","), units: S.units.join(","),
+    var map = { dim: S.dim, period: S.period, type: S.cmp, j: S.jurs.join(","), units: S.units.join(","),
                 unit: S.unit, cat: S.cat === null ? "" : String(S.cat) };
     return keys.filter(function (k) { return map[k] !== ""; }).map(function (k) { return k + "=" + encodeURIComponent(map[k]).replace(/%2C/g, ","); }).join("&");
   }
@@ -1094,7 +1093,7 @@ window.CI_BOOT = function () {
     history.replaceState(null, "", "#" + path + (q ? "?" + q : ""));
   }
   function exploreHref(view) {
-    var keys = view === "dejure" ? ["view", "dim", "cat"] : view === "defacto" ? ["period", "dim", "units", "cat"]
+    var keys = view === "dejure" ? ["dim", "cat"] : view === "defacto" ? ["period", "dim", "units", "cat"]
              : ["type", "j", "units", "unit", "cat"];
     var q = query(keys);
     return "#/explore/" + view + (q ? "?" + q : "");
@@ -1490,9 +1489,9 @@ window.CI_BOOT = function () {
       "structure or outcomes. It scores " + words(nM) + " mechanisms, grouped into " + words(nD) + " dimensions, from two sides: what the law requires and what is observed in the market."));
     /* coverage summary: each figure is an entry point */
     var cov = el("div", "cov-grid");
-    [[nJ, "Jurisdictions", "scored on the law", "#/explore/dejure?view=rank"],
+    [[nJ, "Jurisdictions", "scored on the law", "#/explore/dejure"],
      [nD, "Dimensions", "shared by both layers", "#/methodology/framework"],
-     [nM, "Obligations", "categories, one indicator each", "#/explore/dejure?view=map&cat=1"],
+     [nM, "Obligations", "categories, one indicator each", "#/explore/dejure?cat=1"],
      [nU, "Market pairs", "gatekeeper and market, observed in practice", "#/explore/defacto"]].forEach(function (x) {
       var a = link(x[3], "");
       a.className = "cov";
@@ -1575,7 +1574,7 @@ window.CI_BOOT = function () {
     var fc = el("div", "kp"), ft = el("div"), fv = el("div", "viz");
     ft.appendChild(okP("Each bar is one jurisdiction's De Jure index in " + DJ_DATE + ": the mean of its " + words(nD) + " dimension scores, from 0 (no obligation category in the law) to 1 " +
       "(all " + words(nM) + " required in full). A score records the law as written, not compliance or market outcomes. Hover over a bar for the dimensions; click it for the profile."));
-    var fa = link("#/explore/dejure?view=rank&dim=overall", "Open the full chart →");
+    var fa = link("#/explore/dejure?dim=overall", "Open in Explore Data →");
     fa.className = "btn btn-outline";
     ft.appendChild(add(el("p"), fa));
     fv.appendChild(rankingList("overall"));
@@ -1660,8 +1659,7 @@ window.CI_BOOT = function () {
   /* ---------------------------------------------------------- De Jure */
   function pageDeJure(app) {
     document.title = "Explore Data: De Jure · The Contestability Index";
-    var viewSeg = segmented([["map", "Map"], ["rank", "Ranking"]], S.view, function (v) { S.view = v; drawStage(); sync(); }, "Map or ranking");
-    app.appendChild(exploreBar("dejure", [["View", viewSeg]]));
+    app.appendChild(exploreBar("dejure", [["View", segmented([["map", "Map"]], "map", function () {}, "View")]]));
     app.appendChild(dataLine());
 
     var grid = el("div", "explore-grid"), list = el("div", "dimlist"), pane = el("div", "rankpane");
@@ -1693,22 +1691,16 @@ window.CI_BOOT = function () {
     function drawStage() {
       stageHead.textContent = "";
       stage.textContent = "";
-      viewSeg.set(S.view);
       stageHead.appendChild(chartHead(
-        (S.view === "map" ? "Map of " : "Jurisdictions ranked by ") + measure() + ", " + DJ_DATE,
-        S.view === "map" ? "Gray areas have not been assessed." : null,
+        "Map of " + measure() + ", " + DJ_DATE,
+        "Gray areas have not been assessed.",
         [helpLink("#/methodology/" + (S.dim === "overall" ? "dejure" : S.dim), "How " + measure() + " is measured"),
          dlButton("contestability_dejure_" + S.dim + ".csv", CSV.dejureHeader, function () { return CSV.dejureRows(CODES, S.dim); })]));
-      if (S.view === "map") {
-        var ms = el("div", "map-stage");
-        world = drawWorld({ interactive: true, keyRef: function () { return S.dim; } });
-        ms.appendChild(world);
-        stage.appendChild(ms);
-        stage.appendChild(el("p", "small muted map-note", "Germany carries its own score; the other 26 EU member states carry the EU score."));
-      } else {
-        world = null;
-        stage.appendChild(rankingList(S.dim));
-      }
+      var ms = el("div", "map-stage");
+      world = drawWorld({ interactive: true, keyRef: function () { return S.dim; } });
+      ms.appendChild(world);
+      stage.appendChild(ms);
+      stage.appendChild(el("p", "small muted map-note", "Germany carries its own score; the other 26 EU member states carry the EU score."));
     }
     function drawMatrix() {
       matrixHead.textContent = "";
@@ -1725,7 +1717,7 @@ window.CI_BOOT = function () {
       drawStage();
       drawMatrix();
     }
-    function sync() { setAddress("/explore/dejure", ["view", "dim", "cat"]); }
+    function sync() { setAddress("/explore/dejure", ["dim", "cat"]); }
     drawAll();
     sync();
     if (S.cat !== null) {
@@ -2563,7 +2555,7 @@ window.CI_BOOT = function () {
       add(el("td"), link("#/methodology/dejure", "De Jure: Existence, Scope, Enforceability →"), " · ", link("#/methodology/defacto", "De Facto: 0 / ½ / 1, Missing, Not Applicable →"))));
     b.appendChild(f);
     var act = el("p", "entry-actions");
-    var a1 = link("#/explore/dejure?view=map&dim=" + m.dimension + "&cat=" + m.id, "View associated data: De Jure →");
+    var a1 = link("#/explore/dejure?dim=" + m.dimension + "&cat=" + m.id, "View associated data: De Jure →");
     var a2 = link("#/explore/defacto?period=change&dim=" + m.dimension + "&cat=" + m.id, "View associated data: De Facto →");
     a1.className = a2.className = "btn btn-outline btn-sm";
     add(act, a1, a2);
@@ -2581,7 +2573,7 @@ window.CI_BOOT = function () {
     if (d.dmaObligations) b.appendChild(el("p", "small muted", "Digital Markets Act obligations its De Facto indicators observe: " + d.dmaObligations + "."));
     /* the dimension's scores are in Explore Data; the entry leads there with the dimension preselected */
     var act = el("p", "entry-actions");
-    var v1 = link("#/explore/dejure?view=rank&dim=" + d.id, "View associated data: De Jure scores on " + d.id + " →");
+    var v1 = link("#/explore/dejure?dim=" + d.id, "View associated data: De Jure scores on " + d.id + " →");
     var v2 = link("#/explore/defacto?period=change&dim=" + d.id, "View associated data: De Facto scores on " + d.id + " →");
     v1.className = v2.className = "btn btn-outline btn-sm";
     add(act, v1, v2);
@@ -2924,12 +2916,12 @@ window.CI_BOOT = function () {
     add(c5, ap("lim_coverage", more("#/explore/defacto", "The gatekeeper–market pairs")), ap("lim_markets"),
       ap("lim_evidence", more("#/explore/defacto?units=google_play&period=current", "Google Play, indicator by indicator")));
     c5.appendChild(okP([cap(words(nJ)) + " jurisdictions are assessed on the law. Areas shown in gray on the map have not been assessed, which is different from a score of zero. " +
-      "The 27 EU member states share the EU score; Germany also has its own national regime and its own score. ", more("#/explore/dejure?view=map", "The map")]));
+      "The 27 EU member states share the EU score; Germany also has its own national regime and its own score. ", more("#/explore/dejure", "The map")]));
     h(c5, "Comparability");
     add(c5, ap("lim_cross", more("#/explore/compare?type=mkt", "Compare markets")));
     h(c5, "Aggregation assumptions");
-    add(c5, ap("lim_weights", more("#/explore/dejure?view=rank", "Scores by dimension")));
-    c5.appendChild(okP([ins.precision.text + " ", more("#/explore/dejure?view=rank&dim=overall", "The ranking")]));
+    add(c5, ap("lim_weights", more("#/explore/dejure", "Scores by dimension")));
+    c5.appendChild(okP([ins.precision.text + " ", more("#/applications/frameworks", "The ranking")]));
     h(c5, "Interpretation");
     add(c5, ap("lim_dejure"));
     c5.appendChild(okP(["The jurisdiction-level index and the market-level De Jure score of a pair are therefore different measures: the first describes a jurisdiction's " +
@@ -3124,7 +3116,7 @@ window.CI_BOOT = function () {
         }
       },
       data: [["#/explore/compare?type=jur", "Compare jurisdictions", "Pick two or more jurisdictions and compare them dimension by dimension and category by category."],
-             ["#/explore/dejure?view=rank", "De Jure ranking and matrix", "Every jurisdiction, every dimension, all " + D.meta.totalCells + " category scores."],
+             ["#/explore/dejure", "De Jure map and matrix", "Every jurisdiction, every dimension, all " + D.meta.totalCells + " category scores."],
              ["#/data/downloads?set=dejure", "Download the De Jure data", "Category scores with their three components, legal form and legal basis."]],
       method: ["#/methodology/dejure", "De Jure scoring →"],
       sources: ["#/data/library?type=instrument", "Legal instruments in the source library →"]
@@ -3822,7 +3814,7 @@ window.CI_BOOT = function () {
   /* ------------------------------------------------------------ router */
   // Addresses of earlier versions of the site keep working.
   var LEGACY = { overview: "#/", dejure: "#/explore/dejure", defacto: "#/explore/defacto", markets: "#/explore/defacto", methodology: "#/methodology" };
-  var MOVED = { cases: "#/applications", scoring: "#/methodology", jurisdictions: "#/explore/dejure?view=rank" };
+  var MOVED = { cases: "#/applications", scoring: "#/methodology", jurisdictions: "#/explore/dejure" };
   function parseQuery(q) {
     var p = {};
     String(q || "").split("&").forEach(function (kv) {
@@ -3839,7 +3831,7 @@ window.CI_BOOT = function () {
     var parts = path.split("/"), page = parts[0] || "overview", arg = parts[1] || "";
     if (MOVED[page]) { location.replace(MOVED[page]); return; }
     if (page === "legal" && !jurByCode[arg.toUpperCase()]) { location.replace("#/data/library"); return; }
-    if (page === "jurisdiction" && !jurByCode[arg.toUpperCase()]) { location.replace("#/explore/dejure?view=rank"); return; }
+    if (page === "jurisdiction" && !jurByCode[arg.toUpperCase()]) { location.replace("#/explore/dejure"); return; }
     closePanel(true);
     ttHide();
     var app = $("#app");

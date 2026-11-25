@@ -489,7 +489,7 @@
     }
   },
   "article": {
-    "note": "Text of the Methodology page (pageMethodology in public/js/app.js), which since 2026-11-24 is an article assembled from the team's own documents and no longer a set of quotations. Each passage is a list of parts [source, section, text]; a part is copied from that source (paper = working paper of July 2026, manual = Methodology Manual V3.2, handbook = Coding Handbook V4.1). Nothing inside a part is reworded: only whole sentences, a leading 'First,' / 'Second,' and cross-references to other sections are left out. The page shows these passages without the [AI generated] marker; website/build/check_methodology_text.py (run by publish_site_data.py) stops the publication if a part is not found word for word in its source.",
+    "note": "Running text of the Methodology page. A passage is a list of parts [source, section, text]. Source paper, manual or handbook: whole sentences copied from that document (checked word for word by build/check_methodology_text.py). Source site: wording written for the site on the basis of the team's documents; the section field names what it rests on. A passage with such wording is listed in awaitingReview and opens with the [AI generated] marker on the page until Chris has reviewed and approved it; then its key moves to reviewed with the date, and the marker goes.",
     "sources": {
       "paper": "Working paper, July 2026 (sources/DMA_Contestability.pdf)",
       "manual": "Methodology Manual V3.2",
@@ -498,46 +498,43 @@
     "passages": {
       "abstract": [
         [
-          "paper",
-          "Abstract",
-          "How can contestability in digital markets be measured consistently across jurisdictions and markets?"
+          "site",
+          "Working paper, Abstract and Section 1",
+          "How can contestability in digital markets be measured consistently across jurisdictions and markets? The Contestability Index rests on a multidimensional measurement framework that defines contestability as the opportunity for incumbent positions to be challenged, rather than as observed market structure or downstream competitive outcomes. The framework organizes contestability into four dimensions: User Mobility and Switching, Rival Access and Distribution, Platform Neutrality and Non-Discrimination, and Data, Interoperability, and Infrastructure Access. Each dimension is evaluated from two complementary perspectives. De Jure Contestability captures the formal legal and regulatory protections supporting the relevant contestability mechanisms, while De Facto Contestability measures the extent to which those mechanisms operate in practice within a defined market. Both are coded on a three-point scale of 0, 0.5, and 1. De Jure obligation categories are evaluated according to their existence, scope, and enforceability; De Facto indicators are based on observable manifestations of the same mechanisms, using regulatory findings, independent technical evidence, platform documentation, market data, and other verifiable sources. This page sets out the measurement hierarchy, the units of observation, the scoring and aggregation rules, the evidence standards, and the limits within which the results should be read."
+        ]
+      ],
+      "concept_origin": [
+        [
+          "site",
+          "Working paper, Section 2.1, first sentence without its reference (\"developed by Brock (1983)\")",
+          "The economic concept of contestability originates in the theory of contestable markets."
         ],
         [
           "paper",
-          "1",
-          "The measurement framework translates qualitative institutional and market evidence into standardized scores."
+          "2.1",
+          "Its central insight was that market performance depends not only on the number of incumbent firms, but also on the threat imposed by potential entry."
         ],
         [
           "paper",
-          "Abstract",
-          "The framework organizes contestability into four dimensions: User Mobility and Switching, Rival Access and Distribution, Platform Neutrality and Non-Discrimination, and Data, Interoperability and Infrastructure Access."
+          "2.1",
+          "However, the classical benchmark rests on assumptions that are difficult to reconcile with modern digital markets."
+        ],
+        [
+          "site",
+          "Working paper, Section 2.1, second paragraph: two sentences joined and shortened",
+          "Entry into a digital platform ecosystem is rarely costless: rivals may face barriers including direct and indirect network effects, accumulated data advantages, substantial infrastructure requirements, contractual restrictions, and platform-controlled channels of access and distribution."
         ],
         [
           "paper",
-          "Abstract",
-          "De Jure Contestability captures the formal legal and regulatory protections supporting the relevant contestability mechanisms, while De Facto Contestability measures the extent to which those mechanisms operate in practice within a defined market."
-        ],
-        [
-          "paper",
-          "1",
-          "Contestability is coded on a three-point scale, with 0 representing an absent or highly restrictive protection or condition, 0.5 representing partial contestability subject to material limitations, and 1 representing strong formal protection or effective realization in practice. De Jure obligation categories are evaluated according to their existence, scope, and enforceability. De Facto indicators are based on observable manifestations of the corresponding economic mechanisms, using regulatory findings, independent technical evidence, platform documentation, market data, and other verifiable sources. The framework maintains a common set of dimensions and mechanisms while permitting market-specific operational indicators. This structure is intended to preserve comparability across jurisdictions and time without forcing technologically different digital markets into identical empirical measures."
+          "2.1",
+          "These features motivate a more operational concept of contestability. Rather than asking whether entry and exit are literally costless, we ask whether rivals can realistically overcome the barriers to entry and expansion and challenge incumbent firms on the merits of their products and services. Contestability is therefore a matter of degree. A market becomes more contestable as the institutional, technological, economic, and behavioral frictions confronting challengers are reduced."
         ]
       ],
       "definition": [
         [
           "paper",
-          "1",
-          "We define contestability as the institutional, technological, economic, and behavioral conditions that determine whether rivals can realistically enter, expand, and challenge incumbent firms on the merits of their products and services. This definition treats contestability as a competitive opportunity, rather than as a market structure or downstream competitive outcome."
-        ],
-        [
-          "paper",
           "2.1",
-          "It does not require a market to exhibit low concentration, frequent entry, or immediate displacement of the incumbent. Instead, it asks whether the channels required for a credible competitive challenge remain open."
-        ],
-        [
-          "paper",
-          "2.1",
-          "Contestability is therefore a matter of degree. A market becomes more contestable as the institutional, technological, economic, and behavioral frictions confronting challengers are reduced."
+          "We accordingly define digital-market contestability as: the institutional, technological, economic, and behavioral conditions that determine whether existing rivals and potential entrants can realistically enter, reach users, compete on the merits, and scale viable alternatives to incumbent platforms. This definition treats contestability as a competitive opportunity. It does not require a market to exhibit low concentration, frequent entry, or immediate displacement of the incumbent. Instead, it asks whether the channels required for a credible competitive challenge remain open."
         ]
       ],
       "structure": [
@@ -1146,7 +1143,12 @@
           "The jurisdiction-level index also does not imply that the reported protections operate uniformly in every digital market. A jurisdiction may receive substantial credit because it regulates marketplaces or mobile app stores. However, it might provide little formal support in search, messaging, cloud services, or another market. The jurisdiction-level results should be read as a comparison of regulatory environments."
         ]
       ]
-    }
+    },
+    "awaitingReview": [
+      "abstract",
+      "concept_origin"
+    ],
+    "reviewed": {}
   },
   "documents": [
     {

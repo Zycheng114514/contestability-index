@@ -2584,12 +2584,14 @@ window.CI_BOOT = function () {
      its document. Paragraphs written for the site (figures read from the database, how to use a table) use aiP and
      keep the [AI generated] marker. */
   var ART = (D.paper.article || {}).passages || {};
+  // passages with wording written for the site that Chris has not reviewed yet: they open with the [AI generated] marker
+  var ART_WAIT = (D.paper.article || {}).awaitingReview || [];
   function artText(key) { return (ART[key] || []).map(function (x) { return x[2]; }).join(" "); }
   // one paragraph of the article; `tail` is a link to the data the paragraph is about
   function ap(key, tail) {
     var t = artText(key);
     if (!t) return null;
-    var p = el("p", null, t);
+    var p = ART_WAIT.indexOf(key) >= 0 ? aiP(t) : el("p", null, t);
     p.setAttribute("data-passage", key);
     if (tail) add(p, " ", tail);
     return p;
@@ -2644,13 +2646,13 @@ window.CI_BOOT = function () {
     }
     function h(s, text) { s.appendChild(el("h4", null, text)); }
     main.appendChild(el("h1", "pname", "Methodology"));
-    var abs = ap("abstract");              // the abstract of the article, in the team's own sentences
+    var abs = ap("abstract");              // the abstract of the article
     if (abs) { abs.className = "sec-intro"; main.appendChild(abs); }
     main.appendChild(art);
 
     /* ---- 1. Concept & Scope */
     var c1 = sec("concept", "1. Concept & Scope");
-    add(c1, ap("definition"));
+    add(c1, ap("concept_origin"), ap("definition"));
     h(c1, "What the index measures, and what it does not");
     add(c1, ap("structure"), ap("outcomes"), ap("circularity"));
     h(c1, "Two measurement layers");

@@ -496,6 +496,33 @@
       "handbook": "Coding Handbook V4.1"
     },
     "passages": {
+      "abstract": [
+        [
+          "paper",
+          "Abstract",
+          "How can contestability in digital markets be measured consistently across jurisdictions and markets?"
+        ],
+        [
+          "paper",
+          "1",
+          "The measurement framework translates qualitative institutional and market evidence into standardized scores."
+        ],
+        [
+          "paper",
+          "Abstract",
+          "The framework organizes contestability into four dimensions: User Mobility and Switching, Rival Access and Distribution, Platform Neutrality and Non-Discrimination, and Data, Interoperability and Infrastructure Access."
+        ],
+        [
+          "paper",
+          "Abstract",
+          "De Jure Contestability captures the formal legal and regulatory protections supporting the relevant contestability mechanisms, while De Facto Contestability measures the extent to which those mechanisms operate in practice within a defined market."
+        ],
+        [
+          "paper",
+          "1",
+          "Contestability is coded on a three-point scale, with 0 representing an absent or highly restrictive protection or condition, 0.5 representing partial contestability subject to material limitations, and 1 representing strong formal protection or effective realization in practice. De Jure obligation categories are evaluated according to their existence, scope, and enforceability. De Facto indicators are based on observable manifestations of the corresponding economic mechanisms, using regulatory findings, independent technical evidence, platform documentation, market data, and other verifiable sources. The framework maintains a common set of dimensions and mechanisms while permitting market-specific operational indicators. This structure is intended to preserve comparability across jurisdictions and time without forcing technologically different digital markets into identical empirical measures."
+        ]
+      ],
       "definition": [
         [
           "paper",

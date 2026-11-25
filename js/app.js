@@ -2644,9 +2644,8 @@ window.CI_BOOT = function () {
     }
     function h(s, text) { s.appendChild(el("h4", null, text)); }
     main.appendChild(el("h1", "pname", "Methodology"));
-    main.appendChild(aiP(["How the Contestability Index is built: what it measures, how the framework is organised, how each of the two layers is scored " +
-      "and aggregated, and how the results should be read. Every definition links to the data it produces, and every score in ",
-      link("#/explore/dejure", "Explore Data"), " links back to its entry here."], "sec-intro"));
+    var abs = ap("abstract");              // the abstract of the article, in the team's own sentences
+    if (abs) { abs.className = "sec-intro"; main.appendChild(abs); }
     main.appendChild(art);
 
     /* ---- 1. Concept & Scope */
